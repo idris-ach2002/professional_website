@@ -1,5 +1,6 @@
 package sorbonne.professional_website.controller;
 
+import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -20,7 +21,7 @@ public class ProjectController {
     }
 
     @PostMapping
-    public ResponseEntity<Void> createProject(@RequestBody ProjectRequestDTO projectRequestDTO) {
+    public ResponseEntity<Void> createProject(@RequestBody @Valid ProjectRequestDTO projectRequestDTO) {
         srvProject.createProject(projectRequestDTO);
         return ResponseEntity.status(HttpStatus.CREATED).build();
     }
@@ -38,7 +39,7 @@ public class ProjectController {
     @PutMapping("/{projectId}")
     public ResponseEntity<Void> updateProject(
             @PathVariable Long projectId,
-            @RequestBody ProjectRequestDTO projectRequestDTO
+            @RequestBody @Valid ProjectRequestDTO projectRequestDTO
     ) {
         srvProject.updateProject(projectId, projectRequestDTO);
         return ResponseEntity.noContent().build();

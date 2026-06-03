@@ -1,5 +1,6 @@
 package sorbonne.professional_website.controller;
 
+import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -20,7 +21,7 @@ public class TimelineController {
     }
 
     @PostMapping
-    public ResponseEntity<Void> createTimeline(@RequestBody TimelineRequestDTO timelineRequestDTO) {
+    public ResponseEntity<Void> createTimeline(@RequestBody @Valid TimelineRequestDTO timelineRequestDTO) {
         srvTimeline.createTimeline(timelineRequestDTO);
         return ResponseEntity.status(HttpStatus.CREATED).build();
     }
@@ -38,7 +39,7 @@ public class TimelineController {
     @PutMapping("/{timelineId}")
     public ResponseEntity<Void> updateTimeline(
             @PathVariable Long timelineId,
-            @RequestBody TimelineRequestDTO timelineRequestDTO
+            @RequestBody @Valid TimelineRequestDTO timelineRequestDTO
     ) {
         srvTimeline.updateTimeline(timelineId, timelineRequestDTO);
         return ResponseEntity.noContent().build();

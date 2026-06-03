@@ -1,5 +1,6 @@
 package sorbonne.professional_website.controller;
 
+import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -23,7 +24,7 @@ public class UserController {
     }
 
     @PostMapping
-    public ResponseEntity<Void> createUser(@RequestBody UserRequestDTO userRequestDTO) {
+    public ResponseEntity<Void> createUser(@RequestBody @Valid UserRequestDTO userRequestDTO) {
         srvUser.createUser(userRequestDTO);
         return ResponseEntity.status(HttpStatus.CREATED).build();
     }
@@ -41,7 +42,7 @@ public class UserController {
     @PutMapping("/{userId}")
     public ResponseEntity<Void> updateUser(
             @PathVariable Long userId,
-            @RequestBody UserRequestDTO userRequestDTO
+            @RequestBody @Valid UserRequestDTO userRequestDTO
     ) {
         srvUser.updateUser(userId, userRequestDTO);
         return ResponseEntity.noContent().build();
@@ -56,7 +57,7 @@ public class UserController {
     @PostMapping("/{userId}/profile")
     public ResponseEntity<Void> createOrReplaceProfile(
             @PathVariable Long userId,
-            @RequestBody ProfileRequestDTO profileRequestDTO
+            @RequestBody @Valid ProfileRequestDTO profileRequestDTO
     ) {
         srvUser.createOrReplaceProfile(userId, profileRequestDTO);
         return ResponseEntity.status(HttpStatus.CREATED).build();
@@ -65,7 +66,7 @@ public class UserController {
     @PutMapping("/{userId}/profile")
     public ResponseEntity<Void> updateProfile(
             @PathVariable Long userId,
-            @RequestBody ProfileRequestDTO profileRequestDTO
+            @RequestBody @Valid ProfileRequestDTO profileRequestDTO
     ) {
         srvUser.createOrReplaceProfile(userId, profileRequestDTO);
         return ResponseEntity.noContent().build();
@@ -74,7 +75,7 @@ public class UserController {
     @PostMapping("/{userId}/timeline")
     public ResponseEntity<Void> createOrReplaceTimeline(
             @PathVariable Long userId,
-            @RequestBody TimelineRequestDTO timelineRequestDTO
+            @RequestBody @Valid TimelineRequestDTO timelineRequestDTO
     ) {
         srvUser.createOrReplaceTimeline(userId, timelineRequestDTO);
         return ResponseEntity.status(HttpStatus.CREATED).build();
@@ -83,7 +84,7 @@ public class UserController {
     @PutMapping("/{userId}/timeline")
     public ResponseEntity<Void> updateTimeline(
             @PathVariable Long userId,
-            @RequestBody TimelineRequestDTO timelineRequestDTO
+            @RequestBody @Valid TimelineRequestDTO timelineRequestDTO
     ) {
         srvUser.createOrReplaceTimeline(userId, timelineRequestDTO);
         return ResponseEntity.noContent().build();
@@ -92,7 +93,7 @@ public class UserController {
     @PostMapping("/{userId}/projects")
     public ResponseEntity<Void> addProjectToUser(
             @PathVariable Long userId,
-            @RequestBody ProjectRequestDTO projectRequestDTO
+            @RequestBody @Valid ProjectRequestDTO projectRequestDTO
     ) {
         srvUser.addProjectToUser(userId, projectRequestDTO);
         return ResponseEntity.status(HttpStatus.CREATED).build();

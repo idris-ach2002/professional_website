@@ -1,5 +1,6 @@
 package sorbonne.professional_website.controller;
 
+import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -20,7 +21,7 @@ public class ProfileController {
     }
 
     @PostMapping
-    public ResponseEntity<Void> createProfile(@RequestBody ProfileRequestDTO profileRequestDTO) {
+    public ResponseEntity<Void> createProfile(@RequestBody @Valid ProfileRequestDTO profileRequestDTO) {
         srvProfile.createProfile(profileRequestDTO);
         return ResponseEntity.status(HttpStatus.CREATED).build();
     }
@@ -38,7 +39,7 @@ public class ProfileController {
     @PutMapping("/{profileId}")
     public ResponseEntity<Void> updateProfile(
             @PathVariable Long profileId,
-            @RequestBody ProfileRequestDTO profileRequestDTO
+            @RequestBody @Valid ProfileRequestDTO profileRequestDTO
     ) {
         srvProfile.updateProfile(profileId, profileRequestDTO);
         return ResponseEntity.noContent().build();

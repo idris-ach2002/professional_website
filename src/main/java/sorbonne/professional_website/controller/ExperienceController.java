@@ -1,5 +1,6 @@
 package sorbonne.professional_website.controller;
 
+import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -20,7 +21,7 @@ public class ExperienceController {
     }
 
     @PostMapping
-    public ResponseEntity<Void> createExperience(@RequestBody ExperienceRequestDTO experienceRequestDTO) {
+    public ResponseEntity<Void> createExperience(@RequestBody @Valid ExperienceRequestDTO experienceRequestDTO) {
         srvExperience.createExperience(experienceRequestDTO);
         return ResponseEntity.status(HttpStatus.CREATED).build();
     }
@@ -38,7 +39,7 @@ public class ExperienceController {
     @PutMapping("/{experienceId}")
     public ResponseEntity<Void> updateExperience(
             @PathVariable Long experienceId,
-            @RequestBody ExperienceRequestDTO experienceRequestDTO
+            @RequestBody @Valid ExperienceRequestDTO experienceRequestDTO
     ) {
         srvExperience.updateExperience(experienceId, experienceRequestDTO);
         return ResponseEntity.noContent().build();
