@@ -20,8 +20,8 @@ public record ProjectRequestDTO(
         List<String> stacks,
         List<String> features,
         List<ProjectLinkRequestDTO> links,
-        boolean featured,
-        boolean published,
+        Boolean featured,
+        Boolean published,
         Integer displayOrder
 ) {
 }

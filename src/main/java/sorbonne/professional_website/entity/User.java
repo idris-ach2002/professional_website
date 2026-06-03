@@ -47,18 +47,17 @@ public class User {
     private List<ContactInfo> contacts = new ArrayList<>();
 
     // Profile association
-    @OneToOne
-    @JoinColumn(name="profile_id")
+    @OneToOne(cascade = CascadeType.ALL, orphanRemoval = true)
+    @JoinColumn(name = "profile_id")
     private Profile prof;
 
-    // timeline (school, company, works ..) association
-    @OneToOne
-    @JoinColumn(name="timeline_id")
+    // Timeline association
+    @OneToOne(cascade = CascadeType.ALL, orphanRemoval = true)
+    @JoinColumn(name = "timeline_id")
     private Timeline timeline;
 
     // Project association
     @OneToMany(targetEntity = Project.class, mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
     private List<Project> projects = new ArrayList<>();
-
 }

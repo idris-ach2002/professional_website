@@ -90,11 +90,11 @@ public class Project {
 
     @Column(name = "featured", nullable = false)
     @Builder.Default
-    private boolean featured = false;
+    private Boolean featured = false;
 
     @Column(name = "published", nullable = false)
     @Builder.Default
-    private boolean published = true;
+    private Boolean published = true;
 
     @Column(name = "display_order")
     private Integer displayOrder;

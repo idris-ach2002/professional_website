@@ -7,6 +7,9 @@ public record UserRequestDTO(
         String firstName,
         int age,
         String address,
-        List<ContactInfoRequestDTO> contacts
+        List<ContactInfoRequestDTO> contacts,
+        ProfileRequestDTO prof,
+        TimelineRequestDTO timeline,
+        List<ProjectRequestDTO> projects
 ) {
 }

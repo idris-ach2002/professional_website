@@ -1,8 +1,14 @@
 package sorbonne.professional_website.mapper;
 
+import sorbonne.professional_website.dto.request.ProjectRequestDTO;
 import sorbonne.professional_website.dto.request.UserRequestDTO;
 import sorbonne.professional_website.dto.response.UserResponseDTO;
+import sorbonne.professional_website.entity.Profile;
+import sorbonne.professional_website.entity.Project;
+import sorbonne.professional_website.entity.Timeline;
 import sorbonne.professional_website.entity.User;
+
+import java.util.List;
 
 public final class UserMapper {
 
@@ -34,6 +40,7 @@ public final class UserMapper {
 
         User user = new User();
         setUserProperties(user, userDTO);
+        setUserRelations(user, userDTO);
 
         return user;
     }
@@ -44,6 +51,7 @@ public final class UserMapper {
         }
 
         setUserProperties(user, userDTO);
+        setUserRelations(user, userDTO);
     }
 
     private static void setUserProperties(User user, UserRequestDTO userDTO) {
@@ -52,5 +60,42 @@ public final class UserMapper {
         user.setAge(userDTO.age());
         user.setAddress(userDTO.address());
         user.setContacts(ContactInfoMapper.fromRequestList(userDTO.contacts()));
+    }
+
+    private static void setUserRelations(User user, UserRequestDTO userDTO) {
+        setProfileRelation(user, userDTO);
+        setTimelineRelation(user, userDTO);
+        setProjectRelations(user, userDTO.projects());
+    }
+
+    private static void setProfileRelation(User user, UserRequestDTO userDTO) {
+        Profile profile = ProfileMapper.fromRequest(userDTO.prof());
+
+        if (profile != null) {
+            profile.setUser(user);
+        }
+
+        user.setProf(profile);
+    }
+
+    private static void setTimelineRelation(User user, UserRequestDTO userDTO) {
+        Timeline timeline = TimelineMapper.fromRequest(userDTO.timeline());
+
+        if (timeline != null) {
+            timeline.setUser(user);
+        }
+
+        user.setTimeline(timeline);
+    }
+
+    private static void setProjectRelations(User user, List<ProjectRequestDTO> projectDTOs) {
+        user.getProjects().clear();
+
+        List<Project> projects = ProjectMapper.fromRequestList(projectDTOs);
+
+        for (Project project : projects) {
+            project.setUser(user);
+            user.getProjects().add(project);
+        }
     }
 }

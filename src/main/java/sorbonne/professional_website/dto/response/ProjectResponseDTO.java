@@ -21,8 +21,8 @@ public record ProjectResponseDTO(
         List<String> stacks,
         List<String> features,
         List<ProjectLinkResponseDTO> links,
-        boolean featured,
-        boolean published,
+        Boolean featured,
+        Boolean published,
         Integer displayOrder
 ) {
 }

@@ -33,8 +33,8 @@ public final class ProjectMapper {
                 copyStringList(project.getStacks()),
                 copyStringList(project.getFeatures()),
                 ProjectLinkMapper.toResponseList(project.getLinks()),
-                project.isFeatured(),
-                project.isPublished(),
+                project.getFeatured(),
+                project.getPublished(),
                 project.getDisplayOrder()
         );
     }
