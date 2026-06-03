@@ -4,7 +4,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import sorbonne.professional_website.dto.UserDTO;
 import sorbonne.professional_website.entity.User;
-import sorbonne.professional_website.exception.UserNotFoundException;
+import sorbonne.professional_website.exception.ResourceNotFoundException;
 import sorbonne.professional_website.mapper.UserMapper;
 import sorbonne.professional_website.repository.UserRepository;
 
@@ -54,6 +54,6 @@ public class UserService {
 
     private User findUserById(Long userId) {
         return rpUser.findById(userId)
-                .orElseThrow(() -> new UserNotFoundException(userId));
+                .orElseThrow(() -> new ResourceNotFoundException("User : " + userId));
     }
 }

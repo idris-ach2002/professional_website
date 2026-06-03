@@ -29,4 +29,38 @@ public final class ProfileMapper {
                 profile.getUpdatedAt()
         );
     }
+
+    public static Profile fromCreateDTO(ProfileDTO profileDTO) {
+        if (profileDTO == null) {
+            return null;
+        }
+
+        Profile profile = new Profile();
+
+        setPropertiesProfile(profileDTO, profile);
+
+        return profile;
+    }
+
+    private static void setPropertiesProfile(ProfileDTO profileDTO, Profile profile) {
+        profile.setTitle(profileDTO.title());
+        profile.setSubtitle(profileDTO.subtitle());
+        profile.setHeadline(profileDTO.headline());
+        profile.setShortDescription(profileDTO.shortDescription());
+        profile.setDescription(profileDTO.description());
+        profile.setLocation(profileDTO.location());
+        profile.setAvailability(profileDTO.availability());
+        profile.setProfileImageUrl(profileDTO.profileImageUrl());
+        profile.setLogoUrl(profileDTO.logoUrl());
+        profile.setCvUrl(profileDTO.cvUrl());
+        profile.setPortfolioUrl(profileDTO.portfolioUrl());
+    }
+
+    public static void updateEntityFromDTO(Profile profile, ProfileDTO profileDTO) {
+        if (profile == null || profileDTO == null) {
+            return;
+        }
+
+        setPropertiesProfile(profileDTO, profile);
+    }
 }
