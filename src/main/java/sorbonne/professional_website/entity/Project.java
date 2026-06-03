@@ -110,7 +110,7 @@ public class Project {
     @Builder
     @NoArgsConstructor
     @AllArgsConstructor
-    private static class ProjectLink {
+    public static class ProjectLink {
 
         @Enumerated(EnumType.STRING)
         @Column(name = "link_type", nullable = false, length = 50)
