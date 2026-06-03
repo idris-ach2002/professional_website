@@ -23,6 +23,20 @@ public final class ProjectLinkMapper {
         );
     }
 
+    public static Project.ProjectLink fromCreateDTO(ProjectLinkDTO projectLinkDTO) {
+        if (projectLinkDTO == null) {
+            return null;
+        }
+
+        Project.ProjectLink projectLink = new Project.ProjectLink();
+
+        projectLink.setType(projectLinkDTO.type());
+        projectLink.setLabel(projectLinkDTO.label());
+        projectLink.setUrl(projectLinkDTO.url());
+
+        return projectLink;
+    }
+
     public static List<ProjectLinkDTO> toDTOList(List<Project.ProjectLink> projectLinks) {
         if (projectLinks == null) {
             return List.of();
@@ -35,5 +49,19 @@ public final class ProjectLinkMapper {
         }
 
         return projectLinkDTOs;
+    }
+
+    public static List<Project.ProjectLink> fromDTOList(List<ProjectLinkDTO> projectLinkDTOs) {
+        if (projectLinkDTOs == null) {
+            return new ArrayList<>();
+        }
+
+        List<Project.ProjectLink> projectLinks = new ArrayList<>();
+
+        for (ProjectLinkDTO projectLinkDTO : projectLinkDTOs) {
+            projectLinks.add(fromCreateDTO(projectLinkDTO));
+        }
+
+        return projectLinks;
     }
 }

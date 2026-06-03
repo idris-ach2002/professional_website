@@ -30,8 +30,44 @@ public final class ProjectMapper {
                 project.getStacks(),
                 project.getFeatures(),
                 ProjectLinkMapper.toDTOList(project.getLinks()),
-                project.getDisplayOrder()
-        );
+                project.getDisplayOrder());
+    }
+
+    public static Project fromCreateDTO(ProjectDTO projectDTO) {
+        if (projectDTO == null) {
+            return null;
+        }
+
+        Project project = new Project();
+
+        setProjectProperties(project, projectDTO);
+
+        return project;
+    }
+
+    public static void updateEntityFromDTO(Project project, ProjectDTO projectDTO) {
+        if (project == null || projectDTO == null) {
+            return;
+        }
+
+        setProjectProperties(project, projectDTO);
+    }
+
+    private static void setProjectProperties(Project project, ProjectDTO projectDTO){
+        project.setTitle(projectDTO.title());
+        project.setSubtitle(projectDTO.subtitle());
+        project.setShortDescription(projectDTO.shortDescription());
+        project.setDescription(projectDTO.description());
+        project.setStartDate(projectDTO.startDate());
+        project.setEndDate(projectDTO.endDate());
+        project.setImageUrl(projectDTO.imageUrl());
+        project.setDemoUrl(projectDTO.demoUrl());
+        project.setGithubUrl(projectDTO.githubUrl());
+        project.setDocumentationUrl(projectDTO.documentationUrl());
+        project.setStacks(toStringList(projectDTO.stacks()));
+        project.setFeatures(toStringList(projectDTO.features()));
+        project.setLinks(ProjectLinkMapper.fromDTOList(projectDTO.links()));
+        project.setDisplayOrder(projectDTO.displayOrder());
     }
 
     public static List<ProjectDTO> toDTOList(List<Project> projects) {
@@ -46,5 +82,27 @@ public final class ProjectMapper {
         }
 
         return projectDTOs;
+    }
+
+    public static List<Project> fromDTOList(List<ProjectDTO> projectDTOs) {
+        if (projectDTOs == null) {
+            return new ArrayList<>();
+        }
+
+        List<Project> projects = new ArrayList<>();
+
+        for (ProjectDTO projectDTO : projectDTOs) {
+            projects.add(fromCreateDTO(projectDTO));
+        }
+
+        return projects;
+    }
+
+    private static List<String> toStringList(List<String> values) {
+        if (values == null) {
+            return new ArrayList<>();
+        }
+
+        return new ArrayList<>(values);
     }
 }
