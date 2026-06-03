@@ -14,6 +14,7 @@ public final class ProfileMapper {
         }
 
         return new ProfileDTO(
+                profile.getId(),
                 profile.getTitle(),
                 profile.getSubtitle(),
                 profile.getHeadline(),

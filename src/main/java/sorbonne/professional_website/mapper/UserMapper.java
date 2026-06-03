@@ -19,6 +19,7 @@ public final class UserMapper {
         }
 
         return new UserDTO(
+                user.getUserId(),
                 user.getName(),
                 user.getFirstName(),
                 user.getAge(),

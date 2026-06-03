@@ -3,6 +3,7 @@ package sorbonne.professional_website.dto;
 import java.time.LocalDateTime;
 
 public record ProfileDTO(
+        Long id,
         String title,
         String subtitle,
         String headline,

@@ -6,6 +6,7 @@ import java.time.LocalDate;
 import java.util.List;
 
 public record ExperienceDTO(
+        Long id,
         CategoryExperience category,
         String title,
         String organization,

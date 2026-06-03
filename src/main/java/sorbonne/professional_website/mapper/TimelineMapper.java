@@ -17,6 +17,7 @@ public final class TimelineMapper {
         }
 
         return new TimelineDTO(
+                timeline.getId(),
                 timeline.getTitle(),
                 timeline.getDescription(),
                 ExperienceMapper.toDTOList(timeline.getExperiences())

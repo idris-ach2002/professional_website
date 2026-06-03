@@ -17,6 +17,7 @@ public final class ProjectMapper {
         }
 
         return new ProjectDTO(
+                project.getId(),
                 project.getTitle(),
                 project.getSubtitle(),
                 project.getShortDescription(),

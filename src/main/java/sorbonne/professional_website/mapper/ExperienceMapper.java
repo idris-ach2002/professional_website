@@ -17,6 +17,7 @@ public final class ExperienceMapper {
         }
 
         return new ExperienceDTO(
+                experience.getId(),
                 experience.getCategory(),
                 experience.getTitle(),
                 experience.getOrganization(),

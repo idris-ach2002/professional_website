@@ -3,6 +3,7 @@ package sorbonne.professional_website.dto;
 import java.util.List;
 
 public record UserDTO(
+        Long userId,
         String name,
         String firstName,
         int age,
