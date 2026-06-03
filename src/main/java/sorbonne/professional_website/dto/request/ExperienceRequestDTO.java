@@ -1,12 +1,11 @@
-package sorbonne.professional_website.dto;
+package sorbonne.professional_website.dto.request;
 
 import sorbonne.professional_website.entity.enumerations.CategoryExperience;
 
 import java.time.LocalDate;
 import java.util.List;
 
-public record ExperienceDTO(
-        Long id,
+public record ExperienceRequestDTO(
         CategoryExperience category,
         String title,
         String organization,

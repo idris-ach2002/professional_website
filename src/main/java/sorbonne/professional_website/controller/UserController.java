@@ -3,7 +3,8 @@ package sorbonne.professional_website.controller;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import sorbonne.professional_website.dto.UserDTO;
+import sorbonne.professional_website.dto.request.UserRequestDTO;
+import sorbonne.professional_website.dto.response.UserResponseDTO;
 import sorbonne.professional_website.service.UserService;
 
 import java.util.List;
@@ -19,27 +20,27 @@ public class UserController {
     }
 
     @PostMapping
-    public ResponseEntity<Void> createUser(@RequestBody UserDTO userCreateDTO) {
-        srvUser.createUser(userCreateDTO);
+    public ResponseEntity<Void> createUser(@RequestBody UserRequestDTO userRequestDTO) {
+        srvUser.createUser(userRequestDTO);
         return ResponseEntity.status(HttpStatus.CREATED).build();
     }
 
     @GetMapping
-    public ResponseEntity<List<UserDTO>> getAllUsers() {
+    public ResponseEntity<List<UserResponseDTO>> getAllUsers() {
         return ResponseEntity.ok(srvUser.getAllUsers());
     }
 
     @GetMapping("/{userId}")
-    public ResponseEntity<UserDTO> getUserById(@PathVariable Long userId) {
+    public ResponseEntity<UserResponseDTO> getUserById(@PathVariable Long userId) {
         return ResponseEntity.ok(srvUser.getUserById(userId));
     }
 
     @PutMapping("/{userId}")
     public ResponseEntity<Void> updateUser(
             @PathVariable Long userId,
-            @RequestBody UserDTO userUpdateDTO
+            @RequestBody UserRequestDTO userRequestDTO
     ) {
-        srvUser.updateUser(userId, userUpdateDTO);
+        srvUser.updateUser(userId, userRequestDTO);
         return ResponseEntity.noContent().build();
     }
 

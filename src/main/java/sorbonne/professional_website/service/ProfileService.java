@@ -2,7 +2,8 @@ package sorbonne.professional_website.service;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import sorbonne.professional_website.dto.ProfileDTO;
+import sorbonne.professional_website.dto.request.ProfileRequestDTO;
+import sorbonne.professional_website.dto.response.ProfileResponseDTO;
 import sorbonne.professional_website.entity.Profile;
 import sorbonne.professional_website.exception.ResourceNotFoundException;
 import sorbonne.professional_website.mapper.ProfileMapper;
@@ -20,30 +21,28 @@ public class ProfileService {
         this.rpProfile = rpProfile;
     }
 
-    public void createProfile(ProfileDTO profileDTO) {
-        Profile profile = ProfileMapper.fromCreateDTO(profileDTO);
+    public void createProfile(ProfileRequestDTO profileRequestDTO) {
+        Profile profile = ProfileMapper.fromRequest(profileRequestDTO);
         rpProfile.save(profile);
     }
 
     @Transactional(readOnly = true)
-    public List<ProfileDTO> getAllProfiles() {
+    public List<ProfileResponseDTO> getAllProfiles() {
         return rpProfile.findAll()
                 .stream()
-                .map(ProfileMapper::toDTO)
+                .map(ProfileMapper::toResponse)
                 .toList();
     }
 
     @Transactional(readOnly = true)
-    public ProfileDTO getProfileById(Long profileId) {
+    public ProfileResponseDTO getProfileById(Long profileId) {
         Profile profile = findProfileById(profileId);
-        return ProfileMapper.toDTO(profile);
+        return ProfileMapper.toResponse(profile);
     }
 
-    public void updateProfile(Long profileId, ProfileDTO profileDTO) {
+    public void updateProfile(Long profileId, ProfileRequestDTO profileRequestDTO) {
         Profile profile = findProfileById(profileId);
-
-        ProfileMapper.updateEntityFromDTO(profile, profileDTO);
-
+        ProfileMapper.updateEntityFromRequest(profile, profileRequestDTO);
         rpProfile.save(profile);
     }
 

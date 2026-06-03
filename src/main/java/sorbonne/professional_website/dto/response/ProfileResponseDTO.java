@@ -1,8 +1,8 @@
-package sorbonne.professional_website.dto;
+package sorbonne.professional_website.dto.response;
 
 import java.time.LocalDateTime;
 
-public record ProfileDTO(
+public record ProfileResponseDTO(
         Long id,
         String title,
         String subtitle,

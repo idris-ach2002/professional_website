@@ -2,7 +2,8 @@ package sorbonne.professional_website.service;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import sorbonne.professional_website.dto.ProjectDTO;
+import sorbonne.professional_website.dto.request.ProjectRequestDTO;
+import sorbonne.professional_website.dto.response.ProjectResponseDTO;
 import sorbonne.professional_website.entity.Project;
 import sorbonne.professional_website.exception.ResourceNotFoundException;
 import sorbonne.professional_website.mapper.ProjectMapper;
@@ -20,30 +21,28 @@ public class ProjectService {
         this.rpProject = rpProject;
     }
 
-    public void createProject(ProjectDTO projectDTO) {
-        Project project = ProjectMapper.fromCreateDTO(projectDTO);
+    public void createProject(ProjectRequestDTO projectRequestDTO) {
+        Project project = ProjectMapper.fromRequest(projectRequestDTO);
         rpProject.save(project);
     }
 
     @Transactional(readOnly = true)
-    public List<ProjectDTO> getAllProjects() {
+    public List<ProjectResponseDTO> getAllProjects() {
         return rpProject.findAll()
                 .stream()
-                .map(ProjectMapper::toDTO)
+                .map(ProjectMapper::toResponse)
                 .toList();
     }
 
     @Transactional(readOnly = true)
-    public ProjectDTO getProjectById(Long projectId) {
+    public ProjectResponseDTO getProjectById(Long projectId) {
         Project project = findProjectById(projectId);
-        return ProjectMapper.toDTO(project);
+        return ProjectMapper.toResponse(project);
     }
 
-    public void updateProject(Long projectId, ProjectDTO projectDTO) {
+    public void updateProject(Long projectId, ProjectRequestDTO projectRequestDTO) {
         Project project = findProjectById(projectId);
-
-        ProjectMapper.updateEntityFromDTO(project, projectDTO);
-
+        ProjectMapper.updateEntityFromRequest(project, projectRequestDTO);
         rpProject.save(project);
     }
 

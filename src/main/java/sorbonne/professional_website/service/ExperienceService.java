@@ -2,7 +2,8 @@ package sorbonne.professional_website.service;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import sorbonne.professional_website.dto.ExperienceDTO;
+import sorbonne.professional_website.dto.request.ExperienceRequestDTO;
+import sorbonne.professional_website.dto.response.ExperienceResponseDTO;
 import sorbonne.professional_website.entity.Experience;
 import sorbonne.professional_website.exception.ResourceNotFoundException;
 import sorbonne.professional_website.mapper.ExperienceMapper;
@@ -20,30 +21,28 @@ public class ExperienceService {
         this.rpExperience = rpExperience;
     }
 
-    public void createExperience(ExperienceDTO experienceDTO) {
-        Experience experience = ExperienceMapper.fromCreateDTO(experienceDTO);
+    public void createExperience(ExperienceRequestDTO experienceRequestDTO) {
+        Experience experience = ExperienceMapper.fromRequest(experienceRequestDTO);
         rpExperience.save(experience);
     }
 
     @Transactional(readOnly = true)
-    public List<ExperienceDTO> getAllExperiences() {
+    public List<ExperienceResponseDTO> getAllExperiences() {
         return rpExperience.findAll()
                 .stream()
-                .map(ExperienceMapper::toDTO)
+                .map(ExperienceMapper::toResponse)
                 .toList();
     }
 
     @Transactional(readOnly = true)
-    public ExperienceDTO getExperienceById(Long experienceId) {
+    public ExperienceResponseDTO getExperienceById(Long experienceId) {
         Experience experience = findExperienceById(experienceId);
-        return ExperienceMapper.toDTO(experience);
+        return ExperienceMapper.toResponse(experience);
     }
 
-    public void updateExperience(Long experienceId, ExperienceDTO experienceDTO) {
+    public void updateExperience(Long experienceId, ExperienceRequestDTO experienceRequestDTO) {
         Experience experience = findExperienceById(experienceId);
-
-        ExperienceMapper.updateEntityFromDTO(experience, experienceDTO);
-
+        ExperienceMapper.updateEntityFromRequest(experience, experienceRequestDTO);
         rpExperience.save(experience);
     }
 

@@ -2,7 +2,8 @@ package sorbonne.professional_website.service;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import sorbonne.professional_website.dto.UserDTO;
+import sorbonne.professional_website.dto.request.UserRequestDTO;
+import sorbonne.professional_website.dto.response.UserResponseDTO;
 import sorbonne.professional_website.entity.User;
 import sorbonne.professional_website.exception.ResourceNotFoundException;
 import sorbonne.professional_website.mapper.UserMapper;
@@ -20,30 +21,28 @@ public class UserService {
         this.rpUser = rpUser;
     }
 
-    public void createUser(UserDTO userCreateDTO) {
-        User user = UserMapper.fromCreateDTO(userCreateDTO);
+    public void createUser(UserRequestDTO userRequestDTO) {
+        User user = UserMapper.fromRequest(userRequestDTO);
         rpUser.save(user);
     }
 
     @Transactional(readOnly = true)
-    public List<UserDTO> getAllUsers() {
+    public List<UserResponseDTO> getAllUsers() {
         return rpUser.findAll()
                 .stream()
-                .map(UserMapper::toDTO)
+                .map(UserMapper::toResponse)
                 .toList();
     }
 
     @Transactional(readOnly = true)
-    public UserDTO getUserById(Long userId) {
+    public UserResponseDTO getUserById(Long userId) {
         User user = findUserById(userId);
-        return UserMapper.toDTO(user);
+        return UserMapper.toResponse(user);
     }
 
-    public void updateUser(Long userId, UserDTO userUpdateDTO) {
+    public void updateUser(Long userId, UserRequestDTO userRequestDTO) {
         User user = findUserById(userId);
-
-        UserMapper.updateEntityFromDTO(user, userUpdateDTO);
-
+        UserMapper.updateEntityFromRequest(user, userRequestDTO);
         rpUser.save(user);
     }
 
@@ -54,6 +53,6 @@ public class UserService {
 
     private User findUserById(Long userId) {
         return rpUser.findById(userId)
-                .orElseThrow(() -> new ResourceNotFoundException("User : " + userId));
+                .orElseThrow(() -> new ResourceNotFoundException("User"));
     }
 }

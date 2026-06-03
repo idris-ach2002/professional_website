@@ -1,14 +1,17 @@
-package sorbonne.professional_website.dto;
+package sorbonne.professional_website.dto.response;
+
+import sorbonne.professional_website.entity.enumerations.ProjectStatus;
 
 import java.time.LocalDate;
 import java.util.List;
 
-public record ProjectDTO(
+public record ProjectResponseDTO(
         Long id,
         String title,
         String subtitle,
         String shortDescription,
         String description,
+        ProjectStatus status,
         LocalDate startDate,
         LocalDate endDate,
         String imageUrl,
@@ -17,7 +20,9 @@ public record ProjectDTO(
         String documentationUrl,
         List<String> stacks,
         List<String> features,
-        List<ProjectLinkDTO> links,
+        List<ProjectLinkResponseDTO> links,
+        boolean featured,
+        boolean published,
         Integer displayOrder
 ) {
 }

@@ -1,6 +1,7 @@
 package sorbonne.professional_website.mapper;
 
-import sorbonne.professional_website.dto.ProfileDTO;
+import sorbonne.professional_website.dto.request.ProfileRequestDTO;
+import sorbonne.professional_website.dto.response.ProfileResponseDTO;
 import sorbonne.professional_website.entity.Profile;
 
 public final class ProfileMapper {
@@ -8,12 +9,12 @@ public final class ProfileMapper {
     private ProfileMapper() {
     }
 
-    public static ProfileDTO toDTO(Profile profile) {
+    public static ProfileResponseDTO toResponse(Profile profile) {
         if (profile == null) {
             return null;
         }
 
-        return new ProfileDTO(
+        return new ProfileResponseDTO(
                 profile.getId(),
                 profile.getTitle(),
                 profile.getSubtitle(),
@@ -31,19 +32,26 @@ public final class ProfileMapper {
         );
     }
 
-    public static Profile fromCreateDTO(ProfileDTO profileDTO) {
+    public static Profile fromRequest(ProfileRequestDTO profileDTO) {
         if (profileDTO == null) {
             return null;
         }
 
         Profile profile = new Profile();
-
-        setPropertiesProfile(profileDTO, profile);
+        setPropertiesProfile(profile, profileDTO);
 
         return profile;
     }
 
-    private static void setPropertiesProfile(ProfileDTO profileDTO, Profile profile) {
+    public static void updateEntityFromRequest(Profile profile, ProfileRequestDTO profileDTO) {
+        if (profile == null || profileDTO == null) {
+            return;
+        }
+
+        setPropertiesProfile(profile, profileDTO);
+    }
+
+    private static void setPropertiesProfile(Profile profile, ProfileRequestDTO profileDTO) {
         profile.setTitle(profileDTO.title());
         profile.setSubtitle(profileDTO.subtitle());
         profile.setHeadline(profileDTO.headline());
@@ -55,13 +63,5 @@ public final class ProfileMapper {
         profile.setLogoUrl(profileDTO.logoUrl());
         profile.setCvUrl(profileDTO.cvUrl());
         profile.setPortfolioUrl(profileDTO.portfolioUrl());
-    }
-
-    public static void updateEntityFromDTO(Profile profile, ProfileDTO profileDTO) {
-        if (profile == null || profileDTO == null) {
-            return;
-        }
-
-        setPropertiesProfile(profileDTO, profile);
     }
 }

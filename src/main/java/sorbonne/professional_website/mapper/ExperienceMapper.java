@@ -1,6 +1,7 @@
 package sorbonne.professional_website.mapper;
 
-import sorbonne.professional_website.dto.ExperienceDTO;
+import sorbonne.professional_website.dto.request.ExperienceRequestDTO;
+import sorbonne.professional_website.dto.response.ExperienceResponseDTO;
 import sorbonne.professional_website.entity.Experience;
 
 import java.util.ArrayList;
@@ -11,12 +12,12 @@ public final class ExperienceMapper {
     private ExperienceMapper() {
     }
 
-    public static ExperienceDTO toDTO(Experience experience) {
+    public static ExperienceResponseDTO toResponse(Experience experience) {
         if (experience == null) {
             return null;
         }
 
-        return new ExperienceDTO(
+        return new ExperienceResponseDTO(
                 experience.getId(),
                 experience.getCategory(),
                 experience.getTitle(),
@@ -29,24 +30,63 @@ public final class ExperienceMapper {
                 experience.isCurrentPosition(),
                 experience.getImageUrl(),
                 experience.getWebsiteUrl(),
-                experience.getSkills(),
+                copyStringList(experience.getSkills()),
                 experience.getDisplayOrder()
         );
     }
 
-    public static Experience fromCreateDTO(ExperienceDTO experienceDTO) {
+    public static Experience fromRequest(ExperienceRequestDTO experienceDTO) {
         if (experienceDTO == null) {
             return null;
         }
 
         Experience experience = new Experience();
-
-        setPropertyExperience(experienceDTO, experience);
+        setExperienceProperties(experience, experienceDTO);
 
         return experience;
     }
 
-    private static void setPropertyExperience(ExperienceDTO experienceDTO, Experience experience) {
+    public static void updateEntityFromRequest(Experience experience, ExperienceRequestDTO experienceDTO) {
+        if (experience == null || experienceDTO == null) {
+            return;
+        }
+
+        setExperienceProperties(experience, experienceDTO);
+    }
+
+    public static List<ExperienceResponseDTO> toResponseList(List<Experience> experiences) {
+        if (experiences == null) {
+            return List.of();
+        }
+
+        List<ExperienceResponseDTO> experienceDTOs = new ArrayList<>();
+
+        for (Experience experience : experiences) {
+            experienceDTOs.add(toResponse(experience));
+        }
+
+        return experienceDTOs;
+    }
+
+    public static List<Experience> fromRequestList(List<ExperienceRequestDTO> experienceDTOs) {
+        if (experienceDTOs == null) {
+            return new ArrayList<>();
+        }
+
+        List<Experience> experiences = new ArrayList<>();
+
+        for (ExperienceRequestDTO experienceDTO : experienceDTOs) {
+            Experience experience = fromRequest(experienceDTO);
+
+            if (experience != null) {
+                experiences.add(experience);
+            }
+        }
+
+        return experiences;
+    }
+
+    private static void setExperienceProperties(Experience experience, ExperienceRequestDTO experienceDTO) {
         experience.setCategory(experienceDTO.category());
         experience.setTitle(experienceDTO.title());
         experience.setOrganization(experienceDTO.organization());
@@ -58,47 +98,11 @@ public final class ExperienceMapper {
         experience.setCurrentPosition(experienceDTO.currentPosition());
         experience.setImageUrl(experienceDTO.imageUrl());
         experience.setWebsiteUrl(experienceDTO.websiteUrl());
-        experience.setSkills(toStringList(experienceDTO.skills()));
+        experience.setSkills(copyStringList(experienceDTO.skills()));
         experience.setDisplayOrder(experienceDTO.displayOrder());
     }
 
-    public static void updateEntityFromDTO(Experience experience, ExperienceDTO experienceDTO) {
-        if (experience == null || experienceDTO == null) {
-            return;
-        }
-
-        setPropertyExperience(experienceDTO, experience);
-    }
-
-    public static List<ExperienceDTO> toDTOList(List<Experience> experiences) {
-        if (experiences == null) {
-            return List.of();
-        }
-
-        List<ExperienceDTO> experienceDTOs = new ArrayList<>();
-
-        for (Experience experience : experiences) {
-            experienceDTOs.add(toDTO(experience));
-        }
-
-        return experienceDTOs;
-    }
-
-    public static List<Experience> fromDTOList(List<ExperienceDTO> experienceDTOs) {
-        if (experienceDTOs == null) {
-            return new ArrayList<>();
-        }
-
-        List<Experience> experiences = new ArrayList<>();
-
-        for (ExperienceDTO experienceDTO : experienceDTOs) {
-            experiences.add(fromCreateDTO(experienceDTO));
-        }
-
-        return experiences;
-    }
-
-    private static List<String> toStringList(List<String> values) {
+    private static List<String> copyStringList(List<String> values) {
         if (values == null) {
             return new ArrayList<>();
         }

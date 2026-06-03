@@ -1,95 +1,56 @@
 package sorbonne.professional_website.mapper;
 
-import sorbonne.professional_website.dto.ContactInfoDTO;
-import sorbonne.professional_website.dto.UserDTO;
-import sorbonne.professional_website.entity.ContactInfo;
+import sorbonne.professional_website.dto.request.UserRequestDTO;
+import sorbonne.professional_website.dto.response.UserResponseDTO;
 import sorbonne.professional_website.entity.User;
-
-import java.util.ArrayList;
-import java.util.List;
 
 public final class UserMapper {
 
     private UserMapper() {
     }
 
-    public static UserDTO toDTO(User user) {
+    public static UserResponseDTO toResponse(User user) {
         if (user == null) {
             return null;
         }
 
-        return new UserDTO(
+        return new UserResponseDTO(
                 user.getUserId(),
                 user.getName(),
                 user.getFirstName(),
                 user.getAge(),
                 user.getAddress(),
-                toContactInfoDTOList(user.getContacts()),
-                ProfileMapper.toDTO(user.getProf()),
-                TimelineMapper.toDTO(user.getTimeline()),
-                ProjectMapper.toDTOList(user.getProjects())
+                ContactInfoMapper.toResponseList(user.getContacts()),
+                ProfileMapper.toResponse(user.getProf()),
+                TimelineMapper.toResponse(user.getTimeline()),
+                ProjectMapper.toResponseList(user.getProjects())
         );
     }
 
-    public static User fromCreateDTO(UserDTO userDTO) {
+    public static User fromRequest(UserRequestDTO userDTO) {
         if (userDTO == null) {
             return null;
         }
 
         User user = new User();
-
-        user.setName(userDTO.name());
-        user.setFirstName(userDTO.firstName());
-        user.setAge(userDTO.age());
-        user.setAddress(userDTO.address());
-        user.setContacts(toContactInfoEntityList(userDTO.contacts()));
+        setUserProperties(user, userDTO);
 
         return user;
     }
 
-    public static void updateEntityFromDTO(User user, UserDTO userDTO) {
+    public static void updateEntityFromRequest(User user, UserRequestDTO userDTO) {
         if (user == null || userDTO == null) {
             return;
         }
 
+        setUserProperties(user, userDTO);
+    }
+
+    private static void setUserProperties(User user, UserRequestDTO userDTO) {
         user.setName(userDTO.name());
         user.setFirstName(userDTO.firstName());
         user.setAge(userDTO.age());
         user.setAddress(userDTO.address());
-        user.setContacts(toContactInfoEntityList(userDTO.contacts()));
-    }
-
-    private static List<ContactInfoDTO> toContactInfoDTOList(List<ContactInfo> contacts) {
-        if (contacts == null) {
-            return List.of();
-        }
-
-        List<ContactInfoDTO> contactInfoDTOs = new ArrayList<>();
-
-        for (ContactInfo contact : contacts) {
-            contactInfoDTOs.add(ContactInfoMapper.toDTO(contact));
-        }
-
-        return contactInfoDTOs;
-    }
-
-    private static List<ContactInfo> toContactInfoEntityList(List<ContactInfoDTO> contacts) {
-        if (contacts == null) {
-            return new ArrayList<>();
-        }
-
-        List<ContactInfo> contactInfos = new ArrayList<>();
-
-        for (ContactInfoDTO contactDTO : contacts) {
-            if (contactDTO != null) {
-                ContactInfo contactInfo = new ContactInfo();
-                contactInfo.setType(contactDTO.type());
-                contactInfo.setValue(contactDTO.value());
-
-                contactInfos.add(contactInfo);
-            }
-        }
-
-        return contactInfos;
+        user.setContacts(ContactInfoMapper.fromRequestList(userDTO.contacts()));
     }
 }

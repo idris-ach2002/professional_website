@@ -1,0 +1,16 @@
+package sorbonne.professional_website.dto.response;
+
+import java.util.List;
+
+public record UserResponseDTO(
+        Long userId,
+        String name,
+        String firstName,
+        int age,
+        String address,
+        List<ContactInfoResponseDTO> contacts,
+        ProfileResponseDTO prof,
+        TimelineResponseDTO timeline,
+        List<ProjectResponseDTO> projects
+) {
+}
