@@ -1,4 +1,4 @@
-package sorbonne.professional_website.main;
+package sorbonne.professional_website;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
@@ -9,5 +9,4 @@ public class ProfessionalWebsiteApplication {
 	public static void main(String[] args) {
 		SpringApplication.run(ProfessionalWebsiteApplication.class, args);
 	}
-
 }
