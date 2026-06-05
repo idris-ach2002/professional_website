@@ -68,5 +68,5 @@ public class Profile {
     private LocalDateTime updatedAt;
 
     @OneToOne(mappedBy = "prof", cascade = CascadeType.ALL)
-    private User user;
+    private Owner owner;
 }

@@ -9,7 +9,7 @@ import jakarta.validation.constraints.Size;
 
 import java.util.List;
 
-public record UserRequestDTO(
+public record OwnerRequestDTO(
         @NotBlank(message = "Le nom est obligatoire.")
         @Size(max = 256, message = "Le nom ne doit pas dépasser 256 caractères.")
         String name,

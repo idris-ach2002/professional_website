@@ -2,8 +2,8 @@ package sorbonne.professional_website.dto.response;
 
 import java.util.List;
 
-public record UserResponseDTO(
-        Long userId,
+public record OwnerResponseDTO(
+        Long ownerId,
         String name,
         String firstName,
         int age,

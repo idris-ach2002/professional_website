@@ -41,5 +41,5 @@ public class Timeline {
     private List<Experience> experiences = new ArrayList<>();
 
     @OneToOne(mappedBy = "timeline", cascade = CascadeType.ALL)
-    private User user;
+    private Owner owner;
 }

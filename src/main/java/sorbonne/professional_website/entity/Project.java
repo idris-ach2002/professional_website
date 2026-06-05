@@ -100,8 +100,8 @@ public class Project {
     private Integer displayOrder;
 
     @ManyToOne(fetch = FetchType.EAGER)
-    @JoinColumn(name="user_id")
-    private User user;
+    @JoinColumn(name="owner_id")
+    private Owner owner;
 
 
     @Embeddable

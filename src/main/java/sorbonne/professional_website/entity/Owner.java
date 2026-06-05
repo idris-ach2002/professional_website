@@ -7,23 +7,22 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Entity
-@Table(name = "app_user")
+@Table(name = "app_owner")
 @Getter
 @Setter
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class User {
-
+public class Owner {
     @Id
-    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "user_seq")
+    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "owner_seq")
     @SequenceGenerator(
-            name = "user_seq",
-            sequenceName = "user_seq",
+            name = "owner_seq",
+            sequenceName = "owner_seq",
             allocationSize = 1
     )
-    @Column(name = "user_id")
-    private Long userId;
+    @Column(name = "owner_id")
+    private Long ownerId;
 
     @Column(length = 256, nullable = false)
     private String name;
@@ -34,14 +33,17 @@ public class User {
     @Column(nullable = false)
     private int age;
 
+    @Column(nullable = false)
+    private Boolean active;
+
     @Column(length = 256, nullable = false)
     private String address;
 
     // Contacts association
     @ElementCollection(fetch = FetchType.EAGER)
     @CollectionTable(
-            name = "user_contacts",
-            joinColumns = @JoinColumn(name = "user_id")
+            name = "owner_contacts",
+            joinColumns = @JoinColumn(name = "owner_id")
     )
     @Builder.Default
     private List<ContactInfo> contacts = new ArrayList<>();
@@ -57,7 +59,7 @@ public class User {
     private Timeline timeline;
 
     // Project association
-    @OneToMany(targetEntity = Project.class, mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OneToMany(targetEntity = Project.class, mappedBy = "owner", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
     private List<Project> projects = new ArrayList<>();
 }
