@@ -56,6 +56,7 @@ public final class OwnerMapper {
         owner.setFirstName(ownerDTO.firstName());
         owner.setAge(ownerDTO.age());
         owner.setAddress(ownerDTO.address());
+        owner.setActive(ownerDTO.active());
         owner.setContacts(ContactInfoMapper.fromRequestList(ownerDTO.contacts()));
     }
 

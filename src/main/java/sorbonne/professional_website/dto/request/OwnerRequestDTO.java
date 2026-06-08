@@ -23,6 +23,9 @@ public record OwnerRequestDTO(
         @Max(value = 120, message = "L'âge ne peut pas dépasser 120 ans.")
         Integer age,
 
+        @NotNull(message = "La version active est obligatoire")
+        Boolean active,
+
         @NotBlank(message = "L'adresse est obligatoire.")
         @Size(max = 256, message = "L'adresse ne doit pas dépasser 256 caractères.")
         String address,
