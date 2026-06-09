@@ -55,7 +55,6 @@ public class GlobalExceptionHandler {
             detailMessage = String.format("Le champ '%s' a reçu une valeur invalide ('%s'). Type attendu : %s.",
                     path, invalidValue, targetType);
 
-
             response.put("field", path);
             response.put("rejectedValue", invalidValue);
         } else if (exception.getMessage() != null) {
@@ -63,6 +62,28 @@ public class GlobalExceptionHandler {
         }
 
         response.put("message", detailMessage);
+
+        return ResponseEntity.badRequest().body(response);
+    }
+
+    @ExceptionHandler(ResourceNotFoundException.class)
+    public ResponseEntity<Map<String, Object>> handleResourceNotFoundException(
+            ResourceNotFoundException exception
+    ) {
+        Map<String, Object> response = new LinkedHashMap<>();
+        response.put("status", HttpStatus.NOT_FOUND.value());
+        response.put("error", "Resource not found");
+        response.put("message", exception.getMessage());
+
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
+    }
+
+    @ExceptionHandler({IllegalArgumentException.class, IllegalStateException.class})
+    public ResponseEntity<Map<String, Object>> handleBusinessException(RuntimeException exception) {
+        Map<String, Object> response = new LinkedHashMap<>();
+        response.put("status", HttpStatus.BAD_REQUEST.value());
+        response.put("error", "Business rule violation");
+        response.put("message", exception.getMessage());
 
         return ResponseEntity.badRequest().body(response);
     }

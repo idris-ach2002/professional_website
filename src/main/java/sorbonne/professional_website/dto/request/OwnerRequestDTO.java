@@ -23,7 +23,7 @@ public record OwnerRequestDTO(
         @Max(value = 120, message = "L'âge ne peut pas dépasser 120 ans.")
         Integer age,
 
-        @NotNull(message = "La version active est obligatoire")
+        @NotNull(message = "Le statut du propriétaire est obligatoire.")
         Boolean active,
 
         @NotBlank(message = "L'adresse est obligatoire.")
@@ -32,6 +32,20 @@ public record OwnerRequestDTO(
 
         @Valid
         List<ContactInfoRequestDTO> contacts,
+
+        /**
+         * Optional metadata for the initial website version created with the owner.
+         */
+        @Size(max = 80, message = "Le tag de version ne doit pas dépasser 80 caractères.")
+        String versionTag,
+
+        @Size(max = 160, message = "Le libellé de version ne doit pas dépasser 160 caractères.")
+        String versionLabel,
+
+        @Size(max = 500, message = "La description de version ne doit pas dépasser 500 caractères.")
+        String versionDescription,
+
+        Boolean versionPublished,
 
         @Valid
         ProfileRequestDTO prof,

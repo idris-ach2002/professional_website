@@ -67,6 +67,6 @@ public class Profile {
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 
-    @OneToOne(mappedBy = "prof", cascade = CascadeType.ALL)
-    private Owner owner;
+    @OneToOne(mappedBy = "profile")
+    private WebsiteVersion websiteVersion;
 }

@@ -64,6 +64,8 @@ public record ProjectRequestDTO(
         @NotNull(message = "Le champ published est obligatoire.")
         Boolean published,
 
-        Integer displayOrder
+        Integer displayOrder,
+
+        Long websiteVersionId
 ) {
 }

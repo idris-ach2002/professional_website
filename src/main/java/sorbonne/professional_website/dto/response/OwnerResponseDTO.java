@@ -7,10 +7,12 @@ public record OwnerResponseDTO(
         String name,
         String firstName,
         int age,
+        Boolean active,
         String address,
         List<ContactInfoResponseDTO> contacts,
         ProfileResponseDTO prof,
         TimelineResponseDTO timeline,
-        List<ProjectResponseDTO> projects
+        List<ProjectResponseDTO> projects,
+        List<WebsiteVersionSummaryResponseDTO> websiteVersions
 ) {
 }

@@ -40,6 +40,6 @@ public class Timeline {
     @Builder.Default
     private List<Experience> experiences = new ArrayList<>();
 
-    @OneToOne(mappedBy = "timeline", cascade = CascadeType.ALL)
-    private Owner owner;
+    @OneToOne(mappedBy = "timeline")
+    private WebsiteVersion websiteVersion;
 }

@@ -1,9 +1,13 @@
 package sorbonne.professional_website.mapper;
 
-import sorbonne.professional_website.dto.request.ProjectRequestDTO;
 import sorbonne.professional_website.dto.request.OwnerRequestDTO;
+import sorbonne.professional_website.dto.request.ProjectRequestDTO;
 import sorbonne.professional_website.dto.response.OwnerResponseDTO;
-import sorbonne.professional_website.entity.*;
+import sorbonne.professional_website.entity.Owner;
+import sorbonne.professional_website.entity.Profile;
+import sorbonne.professional_website.entity.Project;
+import sorbonne.professional_website.entity.Timeline;
+import sorbonne.professional_website.entity.WebsiteVersion;
 
 import java.util.List;
 
@@ -17,16 +21,20 @@ public final class OwnerMapper {
             return null;
         }
 
+        WebsiteVersion activeVersion = owner.getActiveWebsiteVersion().orElse(null);
+
         return new OwnerResponseDTO(
                 owner.getOwnerId(),
                 owner.getName(),
                 owner.getFirstName(),
                 owner.getAge(),
+                owner.getActive(),
                 owner.getAddress(),
                 ContactInfoMapper.toResponseList(owner.getContacts()),
-                ProfileMapper.toResponse(owner.getProf()),
-                TimelineMapper.toResponse(owner.getTimeline()),
-                ProjectMapper.toResponseList(owner.getProjects())
+                activeVersion != null ? ProfileMapper.toResponse(activeVersion.getProfile()) : null,
+                activeVersion != null ? TimelineMapper.toResponse(activeVersion.getTimeline()) : null,
+                activeVersion != null ? ProjectMapper.toResponseList(activeVersion.getProjects()) : List.of(),
+                WebsiteVersionMapper.toSummaryResponseList(owner.getWebsiteVersions())
         );
     }
 
@@ -37,7 +45,7 @@ public final class OwnerMapper {
 
         Owner owner = new Owner();
         setOwnerProperties(owner, ownerDTO);
-        setOwnerRelations(owner, ownerDTO);
+        createInitialWebsiteVersion(owner, ownerDTO);
 
         return owner;
     }
@@ -48,7 +56,6 @@ public final class OwnerMapper {
         }
 
         setOwnerProperties(owner, ownerDTO);
-        setOwnerRelations(owner, ownerDTO);
     }
 
     private static void setOwnerProperties(Owner owner, OwnerRequestDTO ownerDTO) {
@@ -60,40 +67,34 @@ public final class OwnerMapper {
         owner.setContacts(ContactInfoMapper.fromRequestList(ownerDTO.contacts()));
     }
 
-    private static void setOwnerRelations(Owner owner, OwnerRequestDTO ownerDTO) {
-        setProfileRelation(owner, ownerDTO);
-        setTimelineRelation(owner, ownerDTO);
-        setProjectRelations(owner, ownerDTO.projects());
-    }
+    private static void createInitialWebsiteVersion(Owner owner, OwnerRequestDTO ownerDTO) {
+        if (!hasInitialWebsiteContent(ownerDTO)) {
+            return;
+        }
 
-    private static void setProfileRelation(Owner owner, OwnerRequestDTO ownerDTO) {
         Profile profile = ProfileMapper.fromRequest(ownerDTO.prof());
-
-        if (profile != null) {
-            profile.setOwner(owner);
-        }
-
-        owner.setProf(profile);
-    }
-
-    private static void setTimelineRelation(Owner owner, OwnerRequestDTO ownerDTO) {
         Timeline timeline = TimelineMapper.fromRequest(ownerDTO.timeline());
+        List<Project> projects = ProjectMapper.fromRequestList(ownerDTO.projects());
 
-        if (timeline != null) {
-            timeline.setOwner(owner);
-        }
+        WebsiteVersion initialVersion = WebsiteVersionMapper.createInitialVersionFromOwnerRequest(
+                ownerDTO.versionTag(),
+                ownerDTO.versionLabel(),
+                ownerDTO.versionDescription(),
+                ownerDTO.versionPublished(),
+                profile,
+                timeline,
+                projects
+        );
 
-        owner.setTimeline(timeline);
+        initialVersion.setOwner(owner);
+        owner.getWebsiteVersions().add(initialVersion);
     }
 
-    private static void setProjectRelations(Owner owner, List<ProjectRequestDTO> projectDTOs) {
-        owner.getProjects().clear();
+    private static boolean hasInitialWebsiteContent(OwnerRequestDTO ownerDTO) {
+        List<ProjectRequestDTO> projects = ownerDTO.projects();
 
-        List<Project> projects = ProjectMapper.fromRequestList(projectDTOs);
-
-        for (Project project : projects) {
-            project.setOwner(owner);
-            owner.getProjects().add(project);
-        }
+        return ownerDTO.prof() != null
+                || ownerDTO.timeline() != null
+                || (projects != null && !projects.isEmpty());
     }
 }

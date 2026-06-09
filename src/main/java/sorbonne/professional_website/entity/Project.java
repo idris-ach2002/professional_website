@@ -99,9 +99,9 @@ public class Project {
     @Column(name = "display_order")
     private Integer displayOrder;
 
-    @ManyToOne(fetch = FetchType.EAGER)
-    @JoinColumn(name="owner_id")
-    private Owner owner;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "website_version_id", nullable = false)
+    private WebsiteVersion websiteVersion;
 
 
     @Embeddable

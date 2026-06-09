@@ -5,6 +5,7 @@ import lombok.*;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 @Entity
 @Table(name = "app_owner")
@@ -34,12 +35,12 @@ public class Owner {
     private int age;
 
     @Column(nullable = false)
-    private Boolean active;
+    @Builder.Default
+    private Boolean active = true;
 
     @Column(length = 256, nullable = false)
     private String address;
 
-    // Contacts association
     @ElementCollection(fetch = FetchType.EAGER)
     @CollectionTable(
             name = "owner_contacts",
@@ -48,18 +49,28 @@ public class Owner {
     @Builder.Default
     private List<ContactInfo> contacts = new ArrayList<>();
 
-    // Profile association
-    @OneToOne(cascade = CascadeType.ALL, orphanRemoval = true)
-    @JoinColumn(name = "profile_id")
-    private Profile prof;
-
-    // Timeline association
-    @OneToOne(cascade = CascadeType.ALL, orphanRemoval = true)
-    @JoinColumn(name = "timeline_id")
-    private Timeline timeline;
-
-    // Project association
-    @OneToMany(targetEntity = Project.class, mappedBy = "owner", cascade = CascadeType.ALL, orphanRemoval = true)
+    /**
+     * History of the owner's website versions.
+     *
+     * Owner = identity/account.
+     * WebsiteVersion = complete snapshot of the public website content.
+     */
+    @OneToMany(
+            mappedBy = "owner",
+            cascade = CascadeType.ALL,
+            orphanRemoval = true
+    )
+    @OrderBy("createdAt DESC")
     @Builder.Default
-    private List<Project> projects = new ArrayList<>();
+    private List<WebsiteVersion> websiteVersions = new ArrayList<>();
+
+    public Optional<WebsiteVersion> getActiveWebsiteVersion() {
+        if (websiteVersions == null) {
+            return Optional.empty();
+        }
+
+        return websiteVersions.stream()
+                .filter(version -> Boolean.TRUE.equals(version.getActive()))
+                .findFirst();
+    }
 }

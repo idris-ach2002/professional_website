@@ -5,9 +5,11 @@ import org.springframework.transaction.annotation.Transactional;
 import sorbonne.professional_website.dto.request.ProjectRequestDTO;
 import sorbonne.professional_website.dto.response.ProjectResponseDTO;
 import sorbonne.professional_website.entity.Project;
+import sorbonne.professional_website.entity.WebsiteVersion;
 import sorbonne.professional_website.exception.ResourceNotFoundException;
 import sorbonne.professional_website.mapper.ProjectMapper;
 import sorbonne.professional_website.repository.ProjectRepository;
+import sorbonne.professional_website.repository.WebsiteVersionRepository;
 
 import java.util.List;
 
@@ -16,13 +18,27 @@ import java.util.List;
 public class ProjectService {
 
     private final ProjectRepository rpProject;
+    private final WebsiteVersionRepository rpWebsiteVersion;
 
-    public ProjectService(ProjectRepository rpProject) {
+    public ProjectService(
+            ProjectRepository rpProject,
+            WebsiteVersionRepository rpWebsiteVersion
+    ) {
         this.rpProject = rpProject;
+        this.rpWebsiteVersion = rpWebsiteVersion;
     }
 
     public void createProject(ProjectRequestDTO projectRequestDTO) {
+        if (projectRequestDTO.websiteVersionId() == null) {
+            throw new IllegalArgumentException("websiteVersionId est obligatoire pour créer un projet via /api/projects. Utilisez /manager/{ownerId}/versions/{versionId}/projects si vous avez déjà le ownerId.");
+        }
+
+        WebsiteVersion version = rpWebsiteVersion.findById(projectRequestDTO.websiteVersionId())
+                .orElseThrow(() -> new ResourceNotFoundException("WebsiteVersion"));
+
         Project project = ProjectMapper.fromRequest(projectRequestDTO);
+        project.setWebsiteVersion(version);
+
         rpProject.save(project);
     }
 
