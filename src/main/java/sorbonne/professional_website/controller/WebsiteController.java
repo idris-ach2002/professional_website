@@ -25,6 +25,11 @@ public class WebsiteController {
         return ResponseEntity.ok(srvWebsite.getAllPublicWebsites());
     }
 
+    @GetMapping("/default")
+    public ResponseEntity<OwnerResponseDTO> getDefaultWebsite() {
+        return ResponseEntity.ok(srvWebsite.getFirstOwner());
+    }
+
     @GetMapping("/{ownerId}")
     public ResponseEntity<OwnerResponseDTO> getWebsiteByOwner(@PathVariable Long ownerId) {
         return ResponseEntity.ok(srvWebsite.getPublicWebsiteByOwnerId(ownerId));

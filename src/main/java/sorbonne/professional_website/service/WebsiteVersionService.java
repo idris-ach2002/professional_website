@@ -14,10 +14,7 @@ import sorbonne.professional_website.entity.Project;
 import sorbonne.professional_website.entity.Timeline;
 import sorbonne.professional_website.entity.WebsiteVersion;
 import sorbonne.professional_website.exception.ResourceNotFoundException;
-import sorbonne.professional_website.mapper.ProfileMapper;
-import sorbonne.professional_website.mapper.ProjectMapper;
-import sorbonne.professional_website.mapper.TimelineMapper;
-import sorbonne.professional_website.mapper.WebsiteVersionMapper;
+import sorbonne.professional_website.mapper.*;
 import sorbonne.professional_website.repository.OwnerRepository;
 import sorbonne.professional_website.repository.WebsiteVersionRepository;
 

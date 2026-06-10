@@ -1,5 +1,6 @@
 package sorbonne.professional_website.service;
 
+import jakarta.persistence.EntityNotFoundException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import sorbonne.professional_website.dto.response.OwnerResponseDTO;
@@ -43,4 +44,12 @@ public class WebsiteService {
 
         return OwnerMapper.toResponse(owner);
     }
+
+    public OwnerResponseDTO getFirstOwner() {
+        Owner owner = rpOwner.findFirstByOrderByOwnerIdAsc()
+                .orElseThrow(() -> new EntityNotFoundException("No owner found"));
+
+        return OwnerMapper.toResponse(owner);
+    }
+
 }

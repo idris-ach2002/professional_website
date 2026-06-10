@@ -18,4 +18,6 @@ public interface OwnerRepository extends JpaRepository<Owner, Long> {
         where o.ownerId = :ownerId
     """)
     Optional<Owner> lockByOwnerId(@Param("ownerId") Long ownerId);
+
+    Optional<Owner> findFirstByOrderByOwnerIdAsc();
 }
