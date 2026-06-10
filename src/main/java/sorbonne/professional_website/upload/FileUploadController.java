@@ -1,11 +1,14 @@
 package sorbonne.professional_website.upload;
 
+import java.io.IOException;
+import java.nio.file.Files;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
 import org.springframework.core.io.Resource;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -49,9 +52,36 @@ public class FileUploadController {
             return ResponseEntity.notFound().build();
         }
 
+        String contentType = resolveContentType(file);
+
         return ResponseEntity.ok()
+                .contentType(MediaType.parseMediaType(contentType))
                 .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + file.getFilename() + "\"")
                 .body(file);
+    }
+
+    private String resolveContentType(Resource file) {
+        try {
+            String contentType = Files.probeContentType(file.getFile().toPath());
+
+            if (contentType != null && !contentType.isBlank()) {
+                return contentType;
+            }
+        } catch (IOException ignored) {
+            // Fallback below. The browser can still open unknown files as binary.
+        }
+
+        String filename = file.getFilename() == null ? "" : file.getFilename().toLowerCase();
+
+        if (filename.endsWith(".pdf")) return "application/pdf";
+        if (filename.endsWith(".png")) return "image/png";
+        if (filename.endsWith(".jpg") || filename.endsWith(".jpeg")) return "image/jpeg";
+        if (filename.endsWith(".webp")) return "image/webp";
+        if (filename.endsWith(".gif")) return "image/gif";
+        if (filename.endsWith(".svg")) return "image/svg+xml";
+        if (filename.endsWith(".avif")) return "image/avif";
+
+        return MediaType.APPLICATION_OCTET_STREAM_VALUE;
     }
 
     @PostMapping("/")
