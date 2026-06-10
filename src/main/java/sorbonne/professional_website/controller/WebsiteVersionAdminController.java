@@ -15,6 +15,7 @@ import sorbonne.professional_website.dto.request.ProfileRequestDTO;
 import sorbonne.professional_website.dto.request.ProjectRequestDTO;
 import sorbonne.professional_website.dto.request.TimelineRequestDTO;
 import sorbonne.professional_website.dto.request.WebsiteVersionRequestDTO;
+import sorbonne.professional_website.dto.response.ProjectResponseDTO;
 import sorbonne.professional_website.dto.response.WebsiteVersionResponseDTO;
 import sorbonne.professional_website.service.WebsiteVersionService;
 
@@ -58,6 +59,17 @@ public class WebsiteVersionAdminController {
             @RequestBody @Valid WebsiteVersionRequestDTO versionRequestDTO
     ) {
         WebsiteVersionResponseDTO createdVersion = srvWebsiteVersion.createVersion(ownerId, versionRequestDTO);
+        return ResponseEntity.status(HttpStatus.CREATED).body(createdVersion);
+    }
+
+    @PostMapping("/from/{sourceVersionId}")
+    public ResponseEntity<WebsiteVersionResponseDTO> createVersionFromExistingVersion(
+            @PathVariable Long ownerId,
+            @PathVariable Long sourceVersionId,
+            @RequestBody @Valid WebsiteVersionRequestDTO versionRequestDTO
+    ) {
+        WebsiteVersionResponseDTO createdVersion = srvWebsiteVersion
+                .createVersionFromExistingVersion(ownerId, sourceVersionId, versionRequestDTO);
         return ResponseEntity.status(HttpStatus.CREATED).body(createdVersion);
     }
 
@@ -113,5 +125,42 @@ public class WebsiteVersionAdminController {
     ) {
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(srvWebsiteVersion.addProject(ownerId, versionId, projectRequestDTO));
+    }
+
+    @GetMapping("/{versionId}/projects")
+    public ResponseEntity<List<ProjectResponseDTO>> getProjects(
+            @PathVariable Long ownerId,
+            @PathVariable Long versionId
+    ) {
+        return ResponseEntity.ok(srvWebsiteVersion.getProjects(ownerId, versionId));
+    }
+
+    @GetMapping("/{versionId}/projects/{projectId}")
+    public ResponseEntity<ProjectResponseDTO> getProject(
+            @PathVariable Long ownerId,
+            @PathVariable Long versionId,
+            @PathVariable Long projectId
+    ) {
+        return ResponseEntity.ok(srvWebsiteVersion.getProject(ownerId, versionId, projectId));
+    }
+
+    @PutMapping("/{versionId}/projects/{projectId}")
+    public ResponseEntity<ProjectResponseDTO> updateProject(
+            @PathVariable Long ownerId,
+            @PathVariable Long versionId,
+            @PathVariable Long projectId,
+            @RequestBody @Valid ProjectRequestDTO projectRequestDTO
+    ) {
+        return ResponseEntity.ok(srvWebsiteVersion.updateProject(ownerId, versionId, projectId, projectRequestDTO));
+    }
+
+    @DeleteMapping("/{versionId}/projects/{projectId}")
+    public ResponseEntity<Void> deleteProject(
+            @PathVariable Long ownerId,
+            @PathVariable Long versionId,
+            @PathVariable Long projectId
+    ) {
+        srvWebsiteVersion.deleteProject(ownerId, versionId, projectId);
+        return ResponseEntity.noContent().build();
     }
 }

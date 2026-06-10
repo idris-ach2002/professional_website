@@ -19,7 +19,9 @@ public interface WebsiteVersionRepository extends JpaRepository<WebsiteVersion, 
 
     boolean existsByOwnerOwnerIdAndActiveTrue(Long ownerId);
 
-    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    long countByOwnerOwnerId(Long ownerId);
+
+    @Modifying(flushAutomatically = true)
     @Query("""
         update WebsiteVersion w
         set w.active = false

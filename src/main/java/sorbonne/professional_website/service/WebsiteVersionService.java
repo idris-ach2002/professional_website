@@ -7,17 +7,24 @@ import sorbonne.professional_website.dto.request.ProfileRequestDTO;
 import sorbonne.professional_website.dto.request.ProjectRequestDTO;
 import sorbonne.professional_website.dto.request.TimelineRequestDTO;
 import sorbonne.professional_website.dto.request.WebsiteVersionRequestDTO;
+import sorbonne.professional_website.dto.response.ProjectResponseDTO;
 import sorbonne.professional_website.dto.response.WebsiteVersionResponseDTO;
+import sorbonne.professional_website.entity.Experience;
 import sorbonne.professional_website.entity.Owner;
 import sorbonne.professional_website.entity.Profile;
 import sorbonne.professional_website.entity.Project;
 import sorbonne.professional_website.entity.Timeline;
 import sorbonne.professional_website.entity.WebsiteVersion;
 import sorbonne.professional_website.exception.ResourceNotFoundException;
-import sorbonne.professional_website.mapper.*;
+import sorbonne.professional_website.mapper.ProfileMapper;
+import sorbonne.professional_website.mapper.ProjectMapper;
+import sorbonne.professional_website.mapper.TimelineMapper;
+import sorbonne.professional_website.mapper.WebsiteVersionMapper;
 import sorbonne.professional_website.repository.OwnerRepository;
+import sorbonne.professional_website.repository.ProjectRepository;
 import sorbonne.professional_website.repository.WebsiteVersionRepository;
 
+import java.util.ArrayList;
 import java.util.List;
 
 @Service
@@ -26,13 +33,16 @@ public class WebsiteVersionService {
 
     private final OwnerRepository rpOwner;
     private final WebsiteVersionRepository rpWebsiteVersion;
+    private final ProjectRepository rpProject;
 
     public WebsiteVersionService(
             OwnerRepository rpOwner,
-            WebsiteVersionRepository rpWebsiteVersion
+            WebsiteVersionRepository rpWebsiteVersion,
+            ProjectRepository rpProject
     ) {
         this.rpOwner = rpOwner;
         this.rpWebsiteVersion = rpWebsiteVersion;
+        this.rpProject = rpProject;
     }
 
     @Transactional(readOnly = true)
@@ -86,10 +96,45 @@ public class WebsiteVersionService {
         version.setPublished(versionDTO != null && versionDTO.published() != null ? versionDTO.published() : shouldActivate);
         version.setOwner(owner);
 
-        owner.getWebsiteVersions().add(version);
 
         WebsiteVersion savedVersion = rpWebsiteVersion.save(version);
         return WebsiteVersionMapper.toResponse(savedVersion);
+    }
+
+    /**
+     * Creates a new version by copying every content block from another version of the same owner.
+     * Metadata passed in versionDTO overrides the copied metadata. Content fields in versionDTO are intentionally ignored:
+     * this endpoint is made to duplicate profile, timeline and projects without forcing the admin to retype them.
+     */
+    public WebsiteVersionResponseDTO createVersionFromExistingVersion(
+            Long ownerId,
+            Long sourceVersionId,
+            WebsiteVersionRequestDTO versionDTO
+    ) {
+        Owner owner = lockOwner(ownerId);
+        WebsiteVersion sourceVersion = findVersionByOwner(ownerId, sourceVersionId);
+
+        boolean shouldActivate = shouldActivateCreatedVersion(ownerId, versionDTO);
+
+        if (shouldActivate) {
+            rpWebsiteVersion.deactivateAllByOwnerId(ownerId);
+        }
+
+        WebsiteVersion copiedVersion = WebsiteVersion.builder()
+                .versionTag(defaultIfBlank(versionDTO != null ? versionDTO.versionTag() : null, buildDefaultTag(owner)))
+                .label(defaultIfBlank(versionDTO != null ? versionDTO.label() : null, sourceVersion.getLabel() + " — copie"))
+                .description(versionDTO != null ? versionDTO.description() : sourceVersion.getDescription())
+                .active(shouldActivate)
+                .published(versionDTO != null && versionDTO.published() != null ? versionDTO.published() : sourceVersion.getPublished())
+                .owner(owner)
+                .build();
+
+        copiedVersion.attachProfile(copyProfile(sourceVersion.getProfile()));
+        copiedVersion.attachTimeline(copyTimeline(sourceVersion.getTimeline()));
+        copiedVersion.clearAndAttachProjects(copyProjects(sourceVersion.getProjects()));
+
+
+        return WebsiteVersionMapper.toResponse(rpWebsiteVersion.save(copiedVersion));
     }
 
     public WebsiteVersionResponseDTO updateVersion(Long ownerId, Long versionId, WebsiteVersionRequestDTO versionDTO) {
@@ -165,6 +210,46 @@ public class WebsiteVersionService {
         return WebsiteVersionMapper.toResponse(rpWebsiteVersion.save(version));
     }
 
+    @Transactional(readOnly = true)
+    public List<ProjectResponseDTO> getProjects(Long ownerId, Long versionId) {
+        findVersionByOwner(ownerId, versionId);
+
+        return rpProject.findByWebsiteVersion_IdOrderByDisplayOrderAscStartDateDesc(versionId)
+                .stream()
+                .map(ProjectMapper::toResponse)
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public ProjectResponseDTO getProject(Long ownerId, Long versionId, Long projectId) {
+        findVersionByOwner(ownerId, versionId);
+        return ProjectMapper.toResponse(findProjectByVersion(versionId, projectId));
+    }
+
+    public ProjectResponseDTO updateProject(
+            Long ownerId,
+            Long versionId,
+            Long projectId,
+            ProjectRequestDTO projectRequestDTO
+    ) {
+        lockOwner(ownerId);
+        findVersionByOwner(ownerId, versionId);
+
+        Project project = findProjectByVersion(versionId, projectId);
+        ProjectMapper.updateEntityFromRequest(project, projectRequestDTO);
+
+        return ProjectMapper.toResponse(rpProject.save(project));
+    }
+
+    public void deleteProject(Long ownerId, Long versionId, Long projectId) {
+        lockOwner(ownerId);
+        WebsiteVersion version = findVersionByOwner(ownerId, versionId);
+        Project project = findProjectByVersion(versionId, projectId);
+
+        version.getProjects().remove(project);
+        rpProject.delete(project);
+    }
+
     public void deleteVersion(Long ownerId, Long versionId) {
         lockOwner(ownerId);
 
@@ -176,8 +261,6 @@ public class WebsiteVersionService {
 
         rpWebsiteVersion.delete(version);
     }
-
-
 
     private Owner lockOwner(Long ownerId) {
         return rpOwner.lockByOwnerId(ownerId)
@@ -195,8 +278,125 @@ public class WebsiteVersionService {
                 .orElseThrow(() -> new ResourceNotFoundException("WebsiteVersion"));
     }
 
+    private Project findProjectByVersion(Long versionId, Long projectId) {
+        return rpProject.findByIdAndWebsiteVersion_Id(projectId, versionId)
+                .orElseThrow(() -> new ResourceNotFoundException("Project"));
+    }
+
+    private Profile copyProfile(Profile source) {
+        if (source == null) {
+            return null;
+        }
+
+        return Profile.builder()
+                .title(source.getTitle())
+                .subtitle(source.getSubtitle())
+                .headline(source.getHeadline())
+                .shortDescription(source.getShortDescription())
+                .description(source.getDescription())
+                .location(source.getLocation())
+                .availability(source.getAvailability())
+                .profileImageUrl(source.getProfileImageUrl())
+                .logoUrl(source.getLogoUrl())
+                .cvUrl(source.getCvUrl())
+                .portfolioUrl(source.getPortfolioUrl())
+                .build();
+    }
+
+    private Timeline copyTimeline(Timeline source) {
+        if (source == null) {
+            return null;
+        }
+
+        Timeline copiedTimeline = Timeline.builder()
+                .title(source.getTitle())
+                .description(source.getDescription())
+                .build();
+
+        if (source.getExperiences() != null) {
+            for (Experience sourceExperience : source.getExperiences()) {
+                Experience copiedExperience = Experience.builder()
+                        .category(sourceExperience.getCategory())
+                        .title(sourceExperience.getTitle())
+                        .organization(sourceExperience.getOrganization())
+                        .location(sourceExperience.getLocation())
+                        .summary(sourceExperience.getSummary())
+                        .description(sourceExperience.getDescription())
+                        .startDate(sourceExperience.getStartDate())
+                        .endDate(sourceExperience.getEndDate())
+                        .currentPosition(sourceExperience.isCurrentPosition())
+                        .imageUrl(sourceExperience.getImageUrl())
+                        .websiteUrl(sourceExperience.getWebsiteUrl())
+                        .skills(sourceExperience.getSkills() == null ? new ArrayList<>() : new ArrayList<>(sourceExperience.getSkills()))
+                        .displayOrder(sourceExperience.getDisplayOrder())
+                        .timeline(copiedTimeline)
+                        .build();
+
+                copiedTimeline.getExperiences().add(copiedExperience);
+            }
+        }
+
+        return copiedTimeline;
+    }
+
+    private List<Project> copyProjects(List<Project> sourceProjects) {
+        if (sourceProjects == null) {
+            return new ArrayList<>();
+        }
+
+        List<Project> copiedProjects = new ArrayList<>();
+
+        for (Project sourceProject : sourceProjects) {
+            Project copiedProject = Project.builder()
+                    .title(sourceProject.getTitle())
+                    .subtitle(sourceProject.getSubtitle())
+                    .shortDescription(sourceProject.getShortDescription())
+                    .description(sourceProject.getDescription())
+                    .status(sourceProject.getStatus())
+                    .startDate(sourceProject.getStartDate())
+                    .endDate(sourceProject.getEndDate())
+                    .imageUrl(sourceProject.getImageUrl())
+                    .demoUrl(sourceProject.getDemoUrl())
+                    .githubUrl(sourceProject.getGithubUrl())
+                    .documentationUrl(sourceProject.getDocumentationUrl())
+                    .stacks(sourceProject.getStacks() == null ? new ArrayList<>() : new ArrayList<>(sourceProject.getStacks()))
+                    .features(sourceProject.getFeatures() == null ? new ArrayList<>() : new ArrayList<>(sourceProject.getFeatures()))
+                    .links(copyProjectLinks(sourceProject.getLinks()))
+                    .featured(sourceProject.getFeatured())
+                    .published(sourceProject.getPublished())
+                    .displayOrder(sourceProject.getDisplayOrder())
+                    .build();
+
+            copiedProjects.add(copiedProject);
+        }
+
+        return copiedProjects;
+    }
+
+    private List<Project.ProjectLink> copyProjectLinks(List<Project.ProjectLink> sourceLinks) {
+        if (sourceLinks == null) {
+            return new ArrayList<>();
+        }
+
+        List<Project.ProjectLink> copiedLinks = new ArrayList<>();
+
+        for (Project.ProjectLink sourceLink : sourceLinks) {
+            copiedLinks.add(Project.ProjectLink.builder()
+                    .type(sourceLink.getType())
+                    .label(sourceLink.getLabel())
+                    .url(sourceLink.getUrl())
+                    .build());
+        }
+
+        return copiedLinks;
+    }
+
     private String buildDefaultTag(Owner owner) {
-        int nextVersionNumber = owner.getWebsiteVersions() == null ? 1 : owner.getWebsiteVersions().size() + 1;
+        if (owner == null || owner.getOwnerId() == null) {
+            return "v1";
+        }
+
+        long nextVersionNumber = rpWebsiteVersion.countByOwnerOwnerId(owner.getOwnerId()) + 1;
         return "v" + nextVersionNumber;
     }
 
