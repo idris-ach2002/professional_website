@@ -1,0 +1,57 @@
+services:
+  postgres:
+    image: postgres:18
+    container_name: portfolio-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql
+    networks:
+      - portfolio-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+
+  backend:
+    build: .
+    container_name: portfolio-backend
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB}
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD}
+
+      PORTFOLIO_ADMIN_USERNAME: ${PORTFOLIO_ADMIN_USERNAME}
+      PORTFOLIO_ADMIN_PASSWORD: ${PORTFOLIO_ADMIN_PASSWORD}
+
+      JPA_DDL_AUTO: ${JPA_DDL_AUTO}
+      JPA_SHOW_SQL: ${JPA_SHOW_SQL}
+      HIBERNATE_FORMAT_SQL: ${HIBERNATE_FORMAT_SQL}
+      HIBERNATE_HIGHLIGHT_SQL: ${HIBERNATE_HIGHLIGHT_SQL}
+
+      UPLOAD_DIR: ${UPLOAD_DIR}
+    ports:
+      - "8080:8080"
+    volumes:
+      - uploads-data:/app/uploads
+    networks:
+      - portfolio-network
+
+volumes:
+  postgres-data:
+  uploads-data:
+
+networks:
+  portfolio-network:
+    driver: bridge

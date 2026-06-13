@@ -25,6 +25,7 @@ class WebSecurityConfig {
                 .authorizeHttpRequests((requests) -> requests
                         .dispatcherTypeMatchers(DispatcherType.ERROR, DispatcherType.FORWARD).permitAll()
                         .requestMatchers("/", "/login", "/error", "/favicon.ico").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/actuator/health").permitAll()
                         .requestMatchers("/css/**", "/js/**", "/images/**", "/assets/**", "/webjars/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/csrf").authenticated()
 

@@ -1,0 +1,9 @@
+.git
+.idea
+.vscode
+target
+.env
+*.iml
+
+src/main/resources/application-local.yaml
+src/main/resources/application-security.yaml
