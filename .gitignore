@@ -34,5 +34,3 @@ build/
 
 ## Fichiers sensibles
 src/main/resources/application-security.yaml
-src/main/resources/application.yaml
-src/main/resources/db
