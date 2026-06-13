@@ -1,0 +1,208 @@
+<!doctype html>
+<html lang="fr" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Manager — Connexion</title>
+    <style>
+        :root {
+            color-scheme: dark;
+            --bg-1: #020617;
+            --bg-2: #082f49;
+            --panel: rgba(15, 23, 42, .78);
+            --panel-strong: rgba(15, 23, 42, .92);
+            --line: rgba(186, 230, 253, .20);
+            --text: #e0f2fe;
+            --muted: #93c5fd;
+            --accent: #38bdf8;
+            --accent-2: #14b8a6;
+            --danger: #fda4af;
+            --success: #86efac;
+            --shadow: 0 24px 80px rgba(8, 47, 73, .48);
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            min-height: 100vh;
+            margin: 0;
+            font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            color: var(--text);
+            background:
+                    radial-gradient(circle at 18% 12%, rgba(56, 189, 248, .22), transparent 28rem),
+                    radial-gradient(circle at 82% 88%, rgba(20, 184, 166, .18), transparent 24rem),
+                    linear-gradient(135deg, var(--bg-1), var(--bg-2) 55%, #03131f);
+            overflow-x: hidden;
+        }
+
+        body::before,
+        body::after {
+            content: "";
+            position: fixed;
+            inset: auto auto -16rem -8rem;
+            width: 42rem;
+            height: 42rem;
+            border-radius: 999px;
+            border: 1px solid rgba(125, 211, 252, .16);
+            pointer-events: none;
+        }
+
+        body::after {
+            inset: -12rem -10rem auto auto;
+            width: 34rem;
+            height: 34rem;
+            border-color: rgba(45, 212, 191, .13);
+        }
+
+        main {
+            min-height: 100vh;
+            display: grid;
+            place-items: center;
+            padding: 2rem;
+        }
+
+        .login-shell {
+            width: min(100%, 450px);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .card {
+            position: relative;
+            border: 1px solid var(--line);
+            border-radius: 30px;
+            padding: 2.5rem 2.2rem;
+            background: var(--panel-strong);
+            backdrop-filter: blur(24px);
+            box-shadow: var(--shadow);
+        }
+
+        .card-header {
+            margin-bottom: 2rem;
+        }
+
+        .card-header h2 {
+            margin: 0 0 .6rem;
+            font-size: 1.8rem;
+            letter-spacing: -.04em;
+        }
+
+        .card-header p {
+            margin: 0;
+            color: var(--muted);
+            line-height: 1.55;
+            font-size: 0.95rem;
+        }
+
+        .alert {
+            margin: 0 0 1.2rem;
+            padding: .9rem 1rem;
+            border-radius: 16px;
+            font-size: .92rem;
+            line-height: 1.45;
+        }
+
+        .alert-error {
+            border: 1px solid rgba(253, 164, 175, .35);
+            background: rgba(127, 29, 29, .28);
+            color: var(--danger);
+        }
+
+        .alert-success {
+            border: 1px solid rgba(134, 239, 172, .30);
+            background: rgba(20, 83, 45, .25);
+            color: var(--success);
+        }
+
+        label {
+            display: block;
+            margin: 1.2rem 0 .45rem;
+            color: #bae6fd;
+            font-size: .88rem;
+            font-weight: 650;
+        }
+
+        input {
+            width: 100%;
+            min-height: 3.25rem;
+            border: 1px solid rgba(186, 230, 253, .22);
+            border-radius: 18px;
+            padding: 0 1rem;
+            background: rgba(2, 6, 23, .52);
+            color: var(--text);
+            font: inherit;
+            outline: none;
+            transition: border-color .25s ease, background .25s ease, box-shadow .25s ease;
+        }
+
+        input:focus {
+            border-color: rgba(56, 189, 248, .80);
+            background: rgba(2, 6, 23, .74);
+            box-shadow: 0 0 0 4px rgba(56, 189, 248, .15);
+        }
+
+        button {
+            width: 100%;
+            min-height: 3.35rem;
+            margin-top: 2rem;
+            border: 0;
+            border-radius: 18px;
+            color: #00111f;
+            background: linear-gradient(135deg, #7dd3fc, #2dd4bf);
+            font: inherit;
+            font-weight: 800;
+            font-size: 1.05rem;
+            cursor: pointer;
+            box-shadow: 0 10px 25px rgba(56, 189, 248, .20);
+            transition: transform .2s ease, box-shadow .2s ease, filter .2s ease;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            filter: brightness(1.08);
+            box-shadow: 0 15px 35px rgba(56, 189, 248, .30);
+        }
+
+        button:active {
+            transform: translateY(0);
+            box-shadow: 0 5px 15px rgba(56, 189, 248, .20);
+        }
+
+        @media (max-width: 860px) {
+            main { padding: 1rem; }
+            .card { border-radius: 26px; padding: 2rem 1.5rem; }
+        }
+    </style>
+</head>
+<body>
+<main>
+    <section class="login-shell" aria-label="Connexion au manager du portfolio">
+        <section class="card">
+            <div class="card-header">
+                <h2>Connexion</h2>
+                <p>Authentification obligatoire avant toute action de gestion.</p>
+            </div>
+
+            <p class="alert alert-error" th:if="${param.error}">
+                Identifiants incorrects. Vérifie le nom d’utilisateur et le mot de passe.
+            </p>
+            <p class="alert alert-success" th:if="${param.logout}">
+                Session fermée correctement.
+            </p>
+
+            <form th:action="@{/login}" method="post">
+                <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
+
+                <label for="username">Nom d’utilisateur</label>
+                <input id="username" name="username" type="text" autocomplete="username" required autofocus>
+
+                <label for="password">Mot de passe</label>
+                <input id="password" name="password" type="password" autocomplete="current-password" required>
+
+                <button type="submit">Entrer dans le manager</button>
+            </form>
+        </section>
+    </section>
+</main>
+</body>
+</html>
