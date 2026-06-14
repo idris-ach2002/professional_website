@@ -176,11 +176,11 @@
 </head>
 <body>
 <main>
-    <section class="login-shell" aria-label="Connexion au manager du portfolio">
+    <section class="login-shell" aria-label="Connexion">
         <section class="card">
             <div class="card-header">
                 <h2>Connexion</h2>
-                <p>Authentification obligatoire avant toute action de gestion.</p>
+                <p>Connecte-toi pour continuer.</p>
             </div>
 
             <p class="alert alert-error" th:if="${param.error}">
@@ -199,7 +199,7 @@
                 <label for="password">Mot de passe</label>
                 <input id="password" name="password" type="password" autocomplete="current-password" required>
 
-                <button type="submit">Entrer dans le manager</button>
+                <button type="submit">Se connecter</button>
             </form>
         </section>
     </section>

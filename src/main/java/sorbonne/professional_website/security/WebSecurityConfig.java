@@ -28,6 +28,7 @@ class WebSecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/actuator/health").permitAll()
                         .requestMatchers("/css/**", "/js/**", "/images/**", "/assets/**", "/webjars/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/csrf").authenticated()
+                        .requestMatchers(HttpMethod.GET, "/admin").authenticated()
 
                         // Public portfolio read endpoints used by the front-office.
                         .requestMatchers(HttpMethod.GET, "/website/**").permitAll()
@@ -44,7 +45,7 @@ class WebSecurityConfig {
                 .formLogin((form) -> form
                         .loginPage("/login")
                         .loginProcessingUrl("/login")
-                        .defaultSuccessUrl("/manager", false)
+                        .defaultSuccessUrl("/admin", true)
                         .failureUrl("/login?error")
                         .permitAll()
                 )

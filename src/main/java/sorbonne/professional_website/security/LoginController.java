@@ -12,7 +12,7 @@ class LoginController {
     @GetMapping("/login")
     String login(Authentication authentication, CsrfToken csrfToken) {
         if (isAuthenticated(authentication)) {
-            return "redirect:/manager";
+            return "redirect:/admin";
         }
 
         // Force la création du token CSRF avant le rendu Thymeleaf.

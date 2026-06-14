@@ -28,17 +28,11 @@
     <section class="content">
         <span class="code" th:text="${status != null ? status : '403'}">403</span>
         <h1>Accès refusé.</h1>
-        <p>Tu es authentifié, mais ton compte ne dispose pas des droits nécessaires pour cette action.</p>
-
-        <div class="details" th:if="${path != null or message != null or error != null}">
-            <div th:if="${path != null}">Chemin : <span th:text="${path}">/path</span></div>
-            <div th:if="${message != null}">Détail : <span th:text="${message}">message</span></div>
-            <div th:if="${error != null}">Type : <span th:text="${error}">error</span></div>
-        </div>
+        <p>Action non autorisée.</p>
 
         <div class="actions">
-            <a class="primary" href="/website/default">Retour au portfolio</a>
-            <a class="secondary" href="/login">Accès manager</a>
+            <a class="primary" href="/">Retour</a>
+            <a class="secondary" href="/login">Connexion</a>
         </div>
     </section>
 </main>

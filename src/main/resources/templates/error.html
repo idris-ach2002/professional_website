@@ -104,25 +104,11 @@
 
     <h1>Une erreur est survenue</h1>
 
-    <p th:if="${error != null}" th:text="${error}">
-        Erreur serveur.
-    </p>
-
-    <p th:if="${message != null and !#strings.isEmpty(message)}" th:text="${message}">
-        La requête n’a pas pu être traitée.
-    </p>
-
-    <p th:if="${message == null or #strings.isEmpty(message)}">
-        La requête n’a pas pu être traitée correctement.
-    </p>
-
-    <div class="path" th:if="${path != null}">
-        Chemin : <span th:text="${path}">/</span>
-    </div>
+    <p>La requête n’a pas pu être traitée.</p>
 
     <div class="actions">
-        <a class="primary" href="/">Retour accueil</a>
-        <a class="secondary" href="/login">Accès manager</a>
+        <a class="primary" href="/">Retour</a>
+        <a class="secondary" href="/login">Connexion</a>
     </div>
 </main>
 </body>
