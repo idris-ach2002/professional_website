@@ -33,31 +33,35 @@ class WebSecurityConfig {
                 .authorizeHttpRequests((requests) -> requests
                         .dispatcherTypeMatchers(DispatcherType.ERROR, DispatcherType.FORWARD).permitAll()
 
-                        // Required for CORS preflight requests.
+                        // CORS preflight. Obligatoire pour les requêtes cross-origin.
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
 
+                        // Pages publiques / ressources statiques.
                         .requestMatchers("/", "/login", "/error", "/favicon.ico").permitAll()
                         .requestMatchers(HttpMethod.GET, "/actuator/health").permitAll()
                         .requestMatchers("/css/**", "/js/**", "/images/**", "/assets/**", "/webjars/**").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/csrf").authenticated()
+
+                        // Admin HTML : doit rediriger vers /login si non connecté.
                         .requestMatchers(HttpMethod.GET, "/admin").authenticated()
+                        .requestMatchers("/admin/**").authenticated()
+                        .requestMatchers(HttpMethod.GET, "/csrf").authenticated()
 
                         // Public portfolio read endpoints used by the front-office.
                         .requestMatchers(HttpMethod.GET, "/website").permitAll()
                         .requestMatchers(HttpMethod.GET, "/website/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/uploads/files/**").permitAll()
 
-                        // Legacy public endpoint used by the deployed front.
-                        // IMPORTANT: only the exact GET /manager is public.
-                        // /manager/** stays protected below.
+                        // Ancien endpoint lu par le front public.
+                        // On autorise seulement GET /manager.
+                        // Les sous-routes /manager/** restent protégées.
                         .requestMatchers(HttpMethod.GET, "/manager").permitAll()
 
-                        // Manager/admin area: versioning, raw CRUD APIs, uploads list and uploads writes.
+                        // Manager/admin area.
                         .requestMatchers("/manager/**").hasRole("ADMIN")
                         .requestMatchers("/api/**").hasRole("ADMIN")
                         .requestMatchers("/uploads/**").hasRole("ADMIN")
 
-                        // Fail closed: anything not explicitly classified is blocked.
+                        // Fail closed.
                         .anyRequest().denyAll()
                 )
                 .formLogin((form) -> form
@@ -89,8 +93,8 @@ class WebSecurityConfig {
 
         CorsConfiguration configuration = new CorsConfiguration();
 
-        // Only the deployed front origin is allowed.
-        // Example: https://professional-website-front.xxx.workers.dev
+        // Origine distante autorisée uniquement.
+        // Exemple : https://professional-website-front.xxxxx.workers.dev
         configuration.setAllowedOrigins(List.of(allowedOrigin));
 
         configuration.setAllowedMethods(List.of(
@@ -115,8 +119,10 @@ class WebSecurityConfig {
                 "Location"
         ));
 
-        // Keep false unless your Cloudflare front sends cookies/session credentials.
-        configuration.setAllowCredentials(false);
+        // Obligatoire si le front fait fetch(..., { credentials: "include" })
+        // ou Axios avec withCredentials: true.
+        configuration.setAllowCredentials(true);
+
         configuration.setMaxAge(3600L);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
