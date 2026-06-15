@@ -26,7 +26,8 @@ class WebSecurityConfig {
     @Bean
     SecurityFilterChain securityFilterChain(
             HttpSecurity http,
-            UrlBasedCorsConfigurationSource corsConfigurationSource
+            UrlBasedCorsConfigurationSource corsConfigurationSource,
+            FrontendRedirectService frontendRedirectService
     ) throws Exception {
         http
                 .cors(cors -> cors.configurationSource(corsConfigurationSource))
@@ -41,7 +42,7 @@ class WebSecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/actuator/health").permitAll()
                         .requestMatchers("/css/**", "/js/**", "/images/**", "/assets/**", "/webjars/**").permitAll()
 
-                        // Admin HTML : doit rediriger vers /login si non connecté.
+                        // Admin HTML : Spring bloque ici si non connecté, puis /admin est redirigé vers le front.
                         .requestMatchers(HttpMethod.GET, "/admin").authenticated()
                         .requestMatchers("/admin/**").authenticated()
                         .requestMatchers(HttpMethod.GET, "/csrf").authenticated()
@@ -51,15 +52,11 @@ class WebSecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/website/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/uploads/files/**").permitAll()
 
-                        // Ancien endpoint lu par le front public.
-                        // On autorise seulement GET /manager.
-                        // Les sous-routes /manager/** restent protégées.
-                        .requestMatchers(HttpMethod.GET, "/manager").permitAll()
-
-                        // Manager/admin area.
-                        .requestMatchers("/manager/**").hasRole("ADMIN")
+                        // Toute l'API manager est protégée, y compris GET /manager.
+                        // Sinon le front ne peut pas détecter correctement l'état non authentifié.
+                        .requestMatchers("/manager", "/manager/**").hasRole("ADMIN")
                         .requestMatchers("/api/**").hasRole("ADMIN")
-                        .requestMatchers("/uploads/**").hasRole("ADMIN")
+                        .requestMatchers("/uploads", "/uploads/**").hasRole("ADMIN")
 
                         // Fail closed.
                         .anyRequest().denyAll()
@@ -67,8 +64,19 @@ class WebSecurityConfig {
                 .formLogin((form) -> form
                         .loginPage("/login")
                         .loginProcessingUrl("/login")
-                        .defaultSuccessUrl("/admin", true)
-                        .failureUrl("/login?error")
+                        .successHandler((request, response, authentication) -> {
+                            String requestedRedirect = request.getParameter("redirect");
+                            response.sendRedirect(frontendRedirectService.resolveRedirect(requestedRedirect));
+                        })
+                        .failureHandler((request, response, exception) -> {
+                            String requestedRedirect = request.getParameter("redirect");
+                            String targetUrl = frontendRedirectService.resolveRedirect(requestedRedirect);
+                            String encodedTargetUrl = java.net.URLEncoder.encode(
+                                    targetUrl,
+                                    java.nio.charset.StandardCharsets.UTF_8
+                            );
+                            response.sendRedirect("/login?error&redirect=" + encodedTargetUrl);
+                        })
                         .permitAll()
                 )
                 .logout((logout) -> logout
@@ -94,8 +102,8 @@ class WebSecurityConfig {
         CorsConfiguration configuration = new CorsConfiguration();
 
         // Origine distante autorisée uniquement.
-        // Exemple : https://professional-website-front.xxxxx.workers.dev
-        configuration.setAllowedOrigins(List.of(allowedOrigin));
+        // Exemple : https://professional-website-front.achabou02idris.workers.dev
+        configuration.setAllowedOrigins(List.of(stripTrailingSlash(allowedOrigin)));
 
         configuration.setAllowedMethods(List.of(
                 "GET",
@@ -119,10 +127,8 @@ class WebSecurityConfig {
                 "Location"
         ));
 
-        // Obligatoire si le front fait fetch(..., { credentials: "include" })
-        // ou Axios avec withCredentials: true.
+        // Obligatoire car le front appelle l'API avec credentials: "include".
         configuration.setAllowCredentials(true);
-
         configuration.setMaxAge(3600L);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
@@ -148,5 +154,13 @@ class WebSecurityConfig {
                 .build();
 
         return new InMemoryUserDetailsManager(admin);
+    }
+
+    private static String stripTrailingSlash(String value) {
+        String trimmed = value.trim();
+        while (trimmed.endsWith("/") && trimmed.length() > 1) {
+            trimmed = trimmed.substring(0, trimmed.length() - 1);
+        }
+        return trimmed;
     }
 }

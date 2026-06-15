@@ -1,6 +1,11 @@
 server:
   port: ${PORT:8080}
   forward-headers-strategy: framework
+  servlet:
+    session:
+      cookie:
+        same-site: none
+        secure: true
 
 spring:
   application:
@@ -51,3 +56,5 @@ management:
 app:
   cors:
     allowed-origin: ${APP_CORS_ALLOWED_ORIGIN}
+  frontend:
+    origin: ${APP_FRONTEND_ORIGIN:https://professional-website-front.achabou02idris.workers.dev}
