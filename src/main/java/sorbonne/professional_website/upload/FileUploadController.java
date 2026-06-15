@@ -4,7 +4,6 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 
 import org.springframework.core.io.Resource;
 import org.springframework.http.HttpHeaders;
@@ -45,22 +44,22 @@ public class FileUploadController {
     @GetMapping("/files/{filename:.+}")
     @ResponseBody
     public ResponseEntity<Resource> serveFile(@PathVariable String filename) {
-
         Resource file = storageService.loadAsResource(filename);
 
         if (file == null) {
             return ResponseEntity.notFound().build();
         }
 
-        String contentType = resolveContentType(file);
+        String contentType = resolveContentType(file, filename);
+        String displayName = file.getFilename() == null ? filename : file.getFilename();
 
         return ResponseEntity.ok()
                 .contentType(MediaType.parseMediaType(contentType))
-                .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + file.getFilename() + "\"")
+                .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + displayName + "\"")
                 .body(file);
     }
 
-    private String resolveContentType(Resource file) {
+    private String resolveContentType(Resource file, String requestedFilename) {
         try {
             String contentType = Files.probeContentType(file.getFile().toPath());
 
@@ -68,10 +67,13 @@ public class FileUploadController {
                 return contentType;
             }
         } catch (IOException ignored) {
-            // Fallback below. The browser can still open unknown files as binary.
+            // Remote resources, including Cloudinary URLs, cannot always be resolved as local files.
         }
 
-        String filename = file.getFilename() == null ? "" : file.getFilename().toLowerCase();
+        String filename = requestedFilename == null || requestedFilename.isBlank()
+                ? file.getFilename()
+                : requestedFilename;
+        filename = filename == null ? "" : filename.toLowerCase();
 
         if (filename.endsWith(".pdf")) return "application/pdf";
         if (filename.endsWith(".png")) return "image/png";
@@ -80,6 +82,13 @@ public class FileUploadController {
         if (filename.endsWith(".gif")) return "image/gif";
         if (filename.endsWith(".svg")) return "image/svg+xml";
         if (filename.endsWith(".avif")) return "image/avif";
+        if (filename.endsWith(".txt")) return "text/plain";
+        if (filename.endsWith(".csv")) return "text/csv";
+        if (filename.endsWith(".json")) return "application/json";
+        if (filename.endsWith(".doc")) return "application/msword";
+        if (filename.endsWith(".docx")) return "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+        if (filename.endsWith(".ppt")) return "application/vnd.ms-powerpoint";
+        if (filename.endsWith(".pptx")) return "application/vnd.openxmlformats-officedocument.presentationml.presentation";
 
         return MediaType.APPLICATION_OCTET_STREAM_VALUE;
     }
@@ -87,18 +96,17 @@ public class FileUploadController {
     @PostMapping("/")
     @ResponseBody
     public ResponseEntity<Map<String, String>> handleFileUpload(@RequestParam("file") MultipartFile file) {
-        storageService.store(file);
-
-        String filename = Objects.requireNonNull(file.getOriginalFilename());
-        String fileUrl = ServletUriComponentsBuilder
+        StoredFile storedFile = storageService.store(file);
+        String backendFileUrl = ServletUriComponentsBuilder
                 .fromCurrentContextPath()
                 .path("/uploads/files/{filename}")
-                .buildAndExpand(filename)
+                .buildAndExpand(storedFile.filename())
                 .toUriString();
 
         return ResponseEntity.ok(Map.of(
-                "filename", filename,
-                "url", fileUrl
+                "filename", storedFile.filename(),
+                "url", backendFileUrl,
+                "directUrl", storedFile.url() == null ? backendFileUrl : storedFile.url()
         ));
     }
 

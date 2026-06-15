@@ -34,7 +34,13 @@ portfolio:
       password: ${PORTFOLIO_ADMIN_PASSWORD}
 
 storage:
+  provider: ${STORAGE_PROVIDER:local}
   location: ${UPLOAD_DIR:/tmp/uploads}
+  cloudinary:
+    cloud-name: ${CLOUDINARY_CLOUD_NAME:}
+    api-key: ${CLOUDINARY_API_KEY:}
+    api-secret: ${CLOUDINARY_API_SECRET:}
+    folder: ${CLOUDINARY_FOLDER:portfolio}
 
 management:
   endpoints:
