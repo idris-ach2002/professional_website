@@ -9,9 +9,14 @@ import java.nio.charset.CharacterCodingException;
 import java.nio.charset.CodingErrorAction;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.Locale;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
@@ -21,6 +26,7 @@ import java.util.regex.Pattern;
 public class LatexCompileService {
 
     private final CvGenerationProperties properties;
+    private final Map<String, CompiledLatex> compileCache = new ConcurrentHashMap<>();
 
     public LatexCompileService(CvGenerationProperties properties) {
         this.properties = properties;
@@ -32,6 +38,13 @@ public class LatexCompileService {
 
     public CompiledLatex compile(String latexSource, List<CvLatexAsset> assets) {
         String compiler = normalizeCompiler(properties.getCompiler());
+        String cacheKey = cacheKey(compiler, latexSource, assets);
+        CompiledLatex cached = compileCache.get(cacheKey);
+        if (cached != null) {
+            List<String> warnings = new ArrayList<>(cached.warnings());
+            warnings.add("Résultat réutilisé depuis le cache de compilation LaTeX.");
+            return new CompiledLatex(cached.success(), cached.pdfBytes(), cached.logs(), warnings, cached.compiler());
+        }
         Path tempDirectory = null;
 
         try {
@@ -55,13 +68,20 @@ public class LatexCompileService {
                 }
             }
 
-            return new CompiledLatex(
+            CompiledLatex compiled = new CompiledLatex(
                     success,
                     pdfBytes,
                     result.logs(),
                     warnings,
                     compiler
             );
+            if (success) {
+                compileCache.put(cacheKey, compiled);
+                if (compileCache.size() > 32) {
+                    compileCache.keySet().stream().findFirst().ifPresent(compileCache::remove);
+                }
+            }
+            return compiled;
         } catch (IOException e) {
             return new CompiledLatex(
                     false,
@@ -86,6 +106,27 @@ public class LatexCompileService {
             if (tempDirectory != null) {
                 deleteRecursively(tempDirectory);
             }
+        }
+    }
+
+
+    private String cacheKey(String compiler, String latexSource, List<CvLatexAsset> assets) {
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            digest.update((compiler == null ? "latexmk" : compiler).getBytes(StandardCharsets.UTF_8));
+            digest.update((latexSource == null ? "" : latexSource).getBytes(StandardCharsets.UTF_8));
+            if (assets != null) {
+                assets.stream()
+                        .filter(asset -> asset != null && asset.filename() != null && asset.bytes() != null)
+                        .sorted((left, right) -> left.filename().compareTo(right.filename()))
+                        .forEach(asset -> {
+                            digest.update(asset.filename().getBytes(StandardCharsets.UTF_8));
+                            digest.update(asset.bytes());
+                        });
+            }
+            return Base64.getUrlEncoder().withoutPadding().encodeToString(digest.digest());
+        } catch (NoSuchAlgorithmException exception) {
+            return String.valueOf((compiler + "::" + latexSource).hashCode());
         }
     }
 
