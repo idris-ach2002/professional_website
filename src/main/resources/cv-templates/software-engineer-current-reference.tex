@@ -17,6 +17,7 @@
 \usepackage{tabularx}
 \usepackage{array}
 \usepackage{tikz}
+\usepackage[normalem]{ulem}
 \usetikzlibrary{calc}
 \pagestyle{empty}
 \setlength{\parindent}{0pt}
@@ -35,8 +36,9 @@
 \hypersetup{colorlinks=true,urlcolor=accent}
 \tcbset{sharp corners,boxrule=0pt,left=8pt,right=8pt,top=6pt,bottom=6pt}
 \urlstyle{same}
-\newcommand{\cvhref}[2]{\href{#1}{\textcolor{accent!95!black}{\underline{#2}}}}
-\newcommand{\cvhreflight}[2]{\href{#1}{\textcolor{white!92}{\underline{#2}}}}
+\renewcommand{\ULdepth}{1.2pt}
+\newcommand{\cvhref}[2]{\href{#1}{\textcolor{accent!95!black}{\uline{#2}}}}
+\newcommand{\cvhreflight}[2]{\href{#1}{\textcolor{white!92}{\uline{#2}}}}
 \newcommand{\sectiontitle}[1]{{\color{accent!95!black}\bfseries\fontsize{16.3}{16.8}\selectfont #1}\par\vspace{1pt}{\color{line}\rule{\linewidth}{0.65pt}}\par\vspace{2pt}}
 \newcommand{\tagitem}[1]{\tikz[baseline=(x.base)]\node[rounded corners=5pt,fill=chip,draw=line,inner xsep=6pt,inner ysep=3pt,font=\fontsize{9}{9}\selectfont\bfseries,text=ink] (x) {#1};}
 \newcommand{\softchip}[1]{\tikz[baseline=(x.base)]\node[rounded corners=5pt,fill=white,draw=line,inner xsep=5pt,inner ysep=5pt,font=\fontsize{10}{10}\selectfont\bfseries,text=ink] (x) {#1};}
