@@ -73,3 +73,8 @@ app:
     origin: ${APP_FRONTEND_ORIGIN:https://professional-website-front.achabou02idris.workers.dev}
     # Origines acceptées pour les redirections post-login.
     allowed-origins: ${APP_FRONTEND_ALLOWED_ORIGINS:${APP_CORS_ALLOWED_ORIGINS:${APP_CORS_ALLOWED_ORIGIN:http://localhost:5173,http://localhost:4173,https://professional-website-front.achabou02idris.workers.dev}}}
+cv:
+  generation:
+    compiler: ${CV_LATEX_COMPILER:latexmk}
+    timeout-seconds: ${CV_LATEX_TIMEOUT_SECONDS:45}
+    store-latex-source: ${CV_STORE_LATEX_SOURCE:true}

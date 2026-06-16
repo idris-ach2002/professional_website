@@ -61,6 +61,32 @@ public class CloudinaryStorageService implements StorageService {
         }
     }
 
+
+    @Override
+    public StoredFile storeBytes(String originalFilename, byte[] content) {
+        if (content == null || content.length == 0) {
+            throw new StorageException("Failed to store empty generated file.");
+        }
+
+        String filename = FilenameUtils.createSafeUniqueFilename(originalFilename);
+        String publicId = toPublicId(filename);
+
+        try {
+            Map<?, ?> uploadResult = cloudinary.uploader().upload(content, ObjectUtils.asMap(
+                    "resource_type", RESOURCE_TYPE_RAW,
+                    "public_id", publicId,
+                    "overwrite", false,
+                    "use_filename", false,
+                    "unique_filename", false
+            ));
+
+            Object secureUrl = uploadResult.get("secure_url");
+            return new StoredFile(filename, secureUrl == null ? publicUrl(filename) : secureUrl.toString());
+        } catch (Exception e) {
+            throw new StorageException("Failed to store generated file.", e);
+        }
+    }
+
     @Override
     public List<Path> loadAll() {
         // Listing Cloudinary assets is not required by the current admin flow.

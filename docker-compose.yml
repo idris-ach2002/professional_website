@@ -53,6 +53,12 @@ services:
       CLOUDINARY_API_KEY: ${CLOUDINARY_API_KEY:-}
       CLOUDINARY_API_SECRET: ${CLOUDINARY_API_SECRET:-}
       CLOUDINARY_FOLDER: ${CLOUDINARY_FOLDER:-portfolio}
+
+      # CV Builder LaTeX. Ces variables sont aussi définies dans le Dockerfile
+      # pour Render, mais on les expose ici pour pouvoir les changer en local.
+      CV_LATEX_COMPILER: ${CV_LATEX_COMPILER:-latexmk}
+      CV_LATEX_TIMEOUT_SECONDS: ${CV_LATEX_TIMEOUT_SECONDS:-45}
+      CV_STORE_LATEX_SOURCE: ${CV_STORE_LATEX_SOURCE:-true}
     ports:
       - "8080:8080"
     volumes:
