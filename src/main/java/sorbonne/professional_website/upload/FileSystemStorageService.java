@@ -56,6 +56,28 @@ public class FileSystemStorageService implements StorageService {
         }
     }
 
+
+    @Override
+    public StoredFile storeBytes(String originalFilename, byte[] content) {
+        try {
+            if (content == null || content.length == 0) {
+                throw new StorageException("Failed to store empty generated file.");
+            }
+
+            String filename = FilenameUtils.createSafeUniqueFilename(originalFilename);
+            Path destinationFile = this.rootLocation.resolve(filename).normalize().toAbsolutePath();
+
+            if (!destinationFile.getParent().equals(this.rootLocation)) {
+                throw new StorageException("Cannot store file outside current directory.");
+            }
+
+            Files.write(destinationFile, content);
+            return new StoredFile(filename, null);
+        } catch (IOException e) {
+            throw new StorageException("Failed to store generated file.", e);
+        }
+    }
+
     @Override
     public List<Path> loadAll() {
         try (Stream<Path> stream = Files.walk(this.rootLocation, 1)) {

@@ -12,6 +12,8 @@ public interface StorageService {
 
     StoredFile store(MultipartFile file);
 
+    StoredFile storeBytes(String originalFilename, byte[] content);
+
     List<Path> loadAll();
 
     Path load(String filename);
