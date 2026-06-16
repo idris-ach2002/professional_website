@@ -8,6 +8,8 @@ import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
+import org.springframework.web.multipart.MultipartException;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -15,6 +17,31 @@ import java.util.stream.Collectors;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+
+
+    @ExceptionHandler(MaxUploadSizeExceededException.class)
+    public ResponseEntity<Map<String, Object>> handleMaxUploadSizeExceededException(
+            MaxUploadSizeExceededException exception
+    ) {
+        Map<String, Object> response = new LinkedHashMap<>();
+        response.put("status", HttpStatus.PAYLOAD_TOO_LARGE.value());
+        response.put("error", "Upload too large");
+        response.put("message", "Le fichier dépasse la taille maximale autorisée de 10 MB.");
+        response.put("maxFileSize", "10MB");
+        response.put("maxRequestSize", "12MB");
+
+        return ResponseEntity.status(HttpStatus.PAYLOAD_TOO_LARGE).body(response);
+    }
+
+    @ExceptionHandler(MultipartException.class)
+    public ResponseEntity<Map<String, Object>> handleMultipartException(MultipartException exception) {
+        Map<String, Object> response = new LinkedHashMap<>();
+        response.put("status", HttpStatus.BAD_REQUEST.value());
+        response.put("error", "Invalid multipart request");
+        response.put("message", "La requête d'upload est invalide ou le fichier envoyé n'est pas lisible.");
+
+        return ResponseEntity.badRequest().body(response);
+    }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<Map<String, Object>> handleValidationException(
