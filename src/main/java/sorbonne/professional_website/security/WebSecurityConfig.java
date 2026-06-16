@@ -93,17 +93,19 @@ class WebSecurityConfig {
 
     @Bean
     UrlBasedCorsConfigurationSource corsConfigurationSource(
-            @Value("${app.cors.allowed-origin}") String allowedOrigin
+            @Value("${app.cors.allowed-origins}") String allowedOrigins
     ) {
-        if (allowedOrigin == null || allowedOrigin.isBlank()) {
-            throw new IllegalStateException("Missing app.cors.allowed-origin / APP_CORS_ALLOWED_ORIGIN");
+        List<String> origins = parseOrigins(allowedOrigins);
+
+        if (origins.isEmpty()) {
+            throw new IllegalStateException("Missing app.cors.allowed-origins / APP_CORS_ALLOWED_ORIGINS");
         }
 
         CorsConfiguration configuration = new CorsConfiguration();
 
-        // Origine distante autorisée uniquement.
-        // Exemple : https://professional-website-front.achabou02idris.workers.dev
-        configuration.setAllowedOrigins(List.of(stripTrailingSlash(allowedOrigin)));
+        // Origines distantes autorisées uniquement.
+        // Exemples : http://localhost:5173, http://localhost:4173, Cloudflare Workers.
+        configuration.setAllowedOrigins(origins);
 
         configuration.setAllowedMethods(List.of(
                 "GET",
@@ -154,6 +156,19 @@ class WebSecurityConfig {
                 .build();
 
         return new InMemoryUserDetailsManager(admin);
+    }
+
+    private static List<String> parseOrigins(String rawOrigins) {
+        if (rawOrigins == null || rawOrigins.isBlank()) {
+            return List.of();
+        }
+
+        return List.of(rawOrigins.split(","))
+                .stream()
+                .map(String::trim)
+                .filter(value -> !value.isBlank())
+                .map(WebSecurityConfig::stripTrailingSlash)
+                .toList();
     }
 
     private static String stripTrailingSlash(String value) {

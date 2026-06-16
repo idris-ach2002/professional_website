@@ -35,6 +35,13 @@ services:
       PORTFOLIO_ADMIN_USERNAME: ${PORTFOLIO_ADMIN_USERNAME}
       PORTFOLIO_ADMIN_PASSWORD: ${PORTFOLIO_ADMIN_PASSWORD}
 
+      # Front local dev: http://localhost:5173
+      # Front local preview: http://localhost:4173
+      # Front prod Cloudflare: https://professional-website-front.achabou02idris.workers.dev
+      APP_CORS_ALLOWED_ORIGINS: ${APP_CORS_ALLOWED_ORIGINS:-http://localhost:5173,http://localhost:4173,https://professional-website-front.achabou02idris.workers.dev}
+      APP_FRONTEND_ALLOWED_ORIGINS: ${APP_FRONTEND_ALLOWED_ORIGINS:-http://localhost:5173,http://localhost:4173,https://professional-website-front.achabou02idris.workers.dev}
+      APP_FRONTEND_ORIGIN: ${APP_FRONTEND_ORIGIN:-http://localhost:4173}
+
       JPA_DDL_AUTO: ${JPA_DDL_AUTO}
       JPA_SHOW_SQL: ${JPA_SHOW_SQL}
       HIBERNATE_FORMAT_SQL: ${HIBERNATE_FORMAT_SQL}
