@@ -27,6 +27,10 @@ public class LatexCompileService {
     }
 
     public CompiledLatex compile(String latexSource) {
+        return compile(latexSource, List.of());
+    }
+
+    public CompiledLatex compile(String latexSource, List<CvLatexAsset> assets) {
         String compiler = normalizeCompiler(properties.getCompiler());
         Path tempDirectory = null;
 
@@ -34,6 +38,7 @@ public class LatexCompileService {
             tempDirectory = Files.createTempDirectory("portfolio-cv-latex-");
             Path texFile = tempDirectory.resolve("main.tex");
             Files.writeString(texFile, makeRuntimeCompatible(latexSource), StandardCharsets.UTF_8);
+            writeAssets(tempDirectory, assets);
 
             ProcessResult result = runCompiler(compiler, tempDirectory, texFile);
             Path pdfFile = tempDirectory.resolve("main.pdf");
@@ -96,6 +101,30 @@ public class LatexCompileService {
         source = source.replace("\\uline{", "\\underline{");
 
         return source;
+    }
+
+    private void writeAssets(Path workDirectory, List<CvLatexAsset> assets) throws IOException {
+        if (assets == null || assets.isEmpty()) {
+            return;
+        }
+
+        for (CvLatexAsset asset : assets) {
+            if (asset == null || asset.filename() == null || asset.bytes() == null || asset.bytes().length == 0) {
+                continue;
+            }
+
+            String filename = asset.filename().trim();
+            if (!filename.matches("[A-Za-z0-9][A-Za-z0-9._-]{0,95}") || filename.contains("..")) {
+                continue;
+            }
+
+            Path target = workDirectory.resolve(filename).normalize();
+            if (!target.startsWith(workDirectory)) {
+                continue;
+            }
+
+            Files.write(target, asset.bytes());
+        }
     }
 
     private ProcessResult runCompiler(String compiler, Path workDirectory, Path texFile)
