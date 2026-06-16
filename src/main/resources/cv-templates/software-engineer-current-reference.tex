@@ -1,0 +1,221 @@
+
+\documentclass[17pt,a4paper]{article}
+\usepackage[a4paper,margin=0.68cm]{geometry}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[french]{babel}
+\usepackage[scaled=0.97]{helvet}
+\renewcommand{\familydefault}{\sfdefault}
+\usepackage{microtype}
+\usepackage{xcolor}
+\usepackage{enumitem}
+\usepackage{graphicx}
+\usepackage[most]{tcolorbox}
+\usepackage[hidelinks]{hyperref}
+\usepackage{ragged2e}
+\usepackage{fontawesome5}
+\usepackage{tabularx}
+\usepackage{array}
+\usepackage{tikz}
+\usetikzlibrary{calc}
+\pagestyle{empty}
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{0pt}
+\setlength{\tabcolsep}{0pt}
+\setlist[itemize]{leftmargin=10pt,itemsep=1.6pt,topsep=1.6pt,parsep=0pt,partopsep=0pt}
+\definecolor{ink}{HTML}{1C232A}
+\definecolor{ink2}{HTML}{24313A}
+\definecolor{accent}{HTML}{6E877E}
+\definecolor{muted}{HTML}{667680}
+\definecolor{line}{HTML}{D8E1E4}
+\definecolor{soft}{HTML}{F6F8F8}
+\definecolor{chip}{HTML}{E9EFED}
+\definecolor{cardbg}{HTML}{FCFDFD}
+\color{ink}
+\hypersetup{colorlinks=true,urlcolor=accent}
+\tcbset{sharp corners,boxrule=0pt,left=8pt,right=8pt,top=6pt,bottom=6pt}
+\urlstyle{same}
+\newcommand{\cvhref}[2]{\href{#1}{\textcolor{accent!95!black}{\underline{#2}}}}
+\newcommand{\cvhreflight}[2]{\href{#1}{\textcolor{white!92}{\underline{#2}}}}
+\newcommand{\sectiontitle}[1]{{\color{accent!95!black}\bfseries\fontsize{16.3}{16.8}\selectfont #1}\par\vspace{1pt}{\color{line}\rule{\linewidth}{0.65pt}}\par\vspace{2pt}}
+\newcommand{\tagitem}[1]{\tikz[baseline=(x.base)]\node[rounded corners=5pt,fill=chip,draw=line,inner xsep=6pt,inner ysep=3pt,font=\fontsize{9}{9}\selectfont\bfseries,text=ink] (x) {#1};}
+\newcommand{\softchip}[1]{\tikz[baseline=(x.base)]\node[rounded corners=5pt,fill=white,draw=line,inner xsep=5pt,inner ysep=5pt,font=\fontsize{10}{10}\selectfont\bfseries,text=ink] (x) {#1};}
+\newcommand{\contactrow}[3]{{\color{white}\fontsize{10}{10}\selectfont\makebox[1.15em][c]{\color{accent!55}#1}\hspace{0.1em}\textbf{#2}\hspace{0.1em}#3}\par\vspace{1.9pt}}
+\newcommand{\skillcard}[4]{\begin{tcolorbox}[colback=cardbg,colframe=line,boxrule=0.62pt,arc=2.2mm,left=7pt,right=7pt,top=4.8pt,bottom=10pt]{\bfseries\fontsize{12}{12}\selectfont #1}\par{\color{muted}\fontsize{10}{10}\selectfont #2}\par\vspace{2.7pt}{\fontsize{10}{10}\selectfont #3}\par\vspace{8pt}{\color{muted}\fontsize{9}{9.45}\selectfont \textbf{Preuves :} #4}\par\end{tcolorbox}\vspace{8pt}}
+\newcommand{\focuscard}[2]{\begin{tcolorbox}[colback=cardbg,colframe=line,boxrule=0.62pt,arc=2.2mm,left=7pt,right=7pt,top=5.2pt,bottom=5.2pt]{\bfseries\fontsize{10}{10}\selectfont #1}\par\vspace{1pt}#2\par\end{tcolorbox}\vspace{1pt}}
+\newcommand{\experienceentry}[4]{\noindent\begin{tabularx}{\linewidth}{@{}X>{\RaggedLeft\arraybackslash}p{2.28cm}@{}}{\bfseries\fontsize{12}{12}\selectfont #1} & {\color{accent!95!black}\bfseries\fontsize{11}{11}\selectfont #2}\end{tabularx}\par{\color{muted}\fontsize{11}{11}\selectfont #3}\par\vspace{10pt}{\fontsize{11}{11}\selectfont #4}\vspace{14pt}}
+\newcommand{\projectentry}[4]{{\bfseries\fontsize{12}{12}\selectfont #1\hfill\color{muted}\fontsize{11}{11}\selectfont #2}\par{\fontsize{11}{11}\selectfont #3}\par{\color{muted}\fontsize{10}{10}\selectfont #4}\par\vspace{10pt}}
+\newcommand{\entrytitle}[3]{\noindent\begin{tabularx}{\linewidth}{@{}X>{\RaggedLeft\arraybackslash}p{2.25cm}@{}}{\bfseries\fontsize{12}{12}\selectfont #1} & {\color{accent!95!black}\bfseries\fontsize{9.87}{10.22}\selectfont #2}\end{tabularx}\par{\color{muted}\fontsize{9.66}{10.01}\selectfont #3}\par\vspace{1.4pt}}
+\newcommand{\schoolbadge}[2]{\tikz[baseline=(x.base)]\node[rounded corners=2.4pt,fill=soft,draw=line,inner xsep=4.5pt,inner ysep=3pt,font=\fontsize{10.15}{10.57}\selectfont\bfseries,text=ink] (x) {#1\hspace{3pt}{\color{muted}#2}};}
+\newcommand{\schoollogo}[2]{\IfFileExists{#1}{\includegraphics[width=#2]{#1}}{\fbox{\rule{0pt}{1.1cm}\rule{1.1cm}{0pt}}}}
+\newcommand{\langrow}[2]{\noindent\begin{tabularx}{\linewidth}{@{}X r@{}}{\bfseries\fontsize{10.36}{10.79}\selectfont #1} & {\color{muted}\fontsize{10}{10}\selectfont #2}\end{tabularx}\par\vspace{0.8pt}}
+\newlength{\headerpad}\setlength{\headerpad}{12pt}
+\newlength{\headergap}\setlength{\headergap}{12pt}
+\newlength{\headerinnerheight}\setlength{\headerinnerheight}{3.3cm}
+
+\begin{document}
+\enlargethispage{1.4cm}
+\begin{tcolorbox}[enhanced,colback=ink,colframe=ink,arc=4mm,left=\headerpad,right=\headerpad,top=\headerpad,bottom=\headerpad,overlay={\shade[inner color=ink2!60!ink, outer color=ink] (frame.north west) rectangle (frame.south east);\begin{scope}[shift={(frame.south east)}, xshift=-2cm, yshift=1cm]\foreach \i in {1,...,15}{\pgfmathsetseed{\i*7}\pgfmathsetmacro{\xa}{rand*3.5}\pgfmathsetmacro{\ya}{rand*1.5}\pgfmathsetmacro{\xb}{rand*3.5}\pgfmathsetmacro{\yb}{rand*1.5}\draw[accent, opacity=0.12, line width=0.4pt] (\xa,\ya) -- (\xb,\yb);\fill[accent!60, opacity=0.2] (\xa,\ya) circle (1.2pt);}\end{scope}\draw[accent, opacity=0.3, line width=1pt] ([xshift=15pt, yshift=-5pt]frame.north west) -- ([xshift=60pt, yshift=-5pt]frame.north west);}]
+\begin{tabularx}{\linewidth}{@{}m{2.7cm}@{\hspace{\headergap}}X@{\hspace{\headergap}}>{\raggedleft\arraybackslash}m{4.5cm}@{}}
+\begin{minipage}[c][\headerinnerheight][c]{2.7cm}\centering
+\begin{tikzpicture}\draw[accent, line width=1.5pt] (0,0) circle (1.25cm);\draw[white!20, line width=0.5pt] (0,0) circle (1.35cm);\begin{scope}\clip (0,0) circle (1.2cm);\IfFileExists{idris.jpg}{\node at (0,0) {\includegraphics[width=2.5cm]{idris.jpg}};}{\fill[white!10] (-1.2,-1.2) rectangle (1.2,1.2);\node[white!70] at (0,0) {\fontsize{9}{9}\selectfont Photo};}\end{scope}\fill[green!60!accent] (0.85,-0.85) circle (5pt);\draw[ink, line width=1.5pt] (0.85,-0.85) circle (5pt);\end{tikzpicture}
+\end{minipage} &
+\begin{minipage}[c][\headerinnerheight][c]{\linewidth}
+{\fontsize{24}{24}\selectfont\color{white}\bfseries Idris ACHABOU}\par
+\vspace{4pt}
+{\fontsize{15.2}{16}\selectfont\color{accent!90}\bfseries\MakeUppercase{Alternance Java / Spring Boot}}\par
+\vspace{4pt}
+{\color{white!85}\fontsize{10}{10.8}\selectfont Recherche une alternance en \textbf{développement Java / Spring Boot}, avec une approche orientée \textbf{qualité}, architecture et impact utilisateur. Profil rigoureux, capable de comprendre un besoin, structurer une solution et contribuer à des applications fiables et maintenables.}\par
+\vspace{6pt}
+\tagitem{\faCalendar* \hspace{2pt} Sept. 2026}\hspace{0.5cm}
+\tagitem{\faCalendar* \hspace{2pt} 12 mois}\hspace{0.5cm}
+\tagitem{\faBirthdayCake \hspace{2pt} 23 ans}
+\end{minipage} &
+\begin{minipage}[c][\headerinnerheight][c]{4.8cm}\raggedleft
+\contactrow{\faPhone}{}{\textcolor{white}{07 44 75 85 10}}
+\contactrow{\faHome}{}{Choisy-le-Roi}
+\contactrow{\faEnvelope}{}{\cvhreflight{mailto:achabou02idris@gmail.com}{achabou02idris@gmail.com}}
+\contactrow{\faLinkedin}{LinkedIn}{\cvhreflight{https://www.linkedin.com/in/idris-achabou/}{/idris-achabou}}
+\contactrow{\faGlobe}{Portfolio}{\cvhreflight{https://portfolio-xko4.vercel.app/fr}{site-web}}
+\vspace{2pt}\tikz \draw[accent, line width=1pt] (0,0) -- (-1.5,0);
+\end{minipage}
+\end{tabularx}
+\end{tcolorbox}
+\vspace{0.02cm}
+\noindent\makebox[\textwidth][c]{\scalebox{0.74}{\begin{minipage}{1.351\textwidth}
+\noindent
+\begin{minipage}[t]{0.338\textwidth}\vspace{0pt}
+\begin{tcolorbox}[colback=soft,arc=2.8mm]
+\sectiontitle{Langues}
+\langrow{Français}{Bilingue} \vspace{0.2cm}
+\langrow{Anglais}{B2} \vspace{0.2cm}
+\langrow{Kabyle}{Langue maternelle}
+\end{tcolorbox}
+\vspace{0.3cm}
+\begin{tcolorbox}[colback=soft,arc=2.8mm]
+\sectiontitle{Compétences clés}
+
+
+
+\skillcard
+  {Java Backend · Spring Boot}
+  {Java 21, Spring Boot, JPA/Hibernate, Flyway, Validation}
+  {Services REST, persistance PostgreSQL, migrations, validation des entrées, structuration multicouche et robustesse applicative.}
+  {\cvhref{https://github.com/idris-ach2002/professional_website}{professional\_website} + \cvhref{https://github.com/idris-ach2002/ais-java-2025/tree/main/Ais_Project}{ais-java}}
+
+\skillcard
+  {Base de données · SQL}
+  {PostgreSQL, SQL, JPA, JSON / XML}
+  {MCD / MLD, normalisation 2NF/3NF/BCNF, requêtes avancées, triggers SQL et données structurées.}
+  {\cvhref{https://github.com/idris-ach2002/bdd-ais}{bdd-ais} + UE MLBDA}
+
+\skillcard
+  {Linux · Docker · Déploiement}
+  {Linux, systemd, Docker, Render, Cloudflare, Neon DB}
+  {Ligne de commande, supervision, conteneurisation backend, configuration d'environnements et déploiement cloud.}
+  {\cvhref{https://github.com/idris-ach2002/professional_website}{back} + \cvhref{https://github.com/idris-ach2002/professional_website_front}{front}}
+
+\skillcard
+  {Qualité logicielle · Tests}
+  {JUnit, QuickCheck, Hspec, Invariants}
+  {Tests unitaires et de propriétés, validation d'invariants, analyse d'anomalies et fiabilisation des traitements.}
+  {\cvhref{https://github.com/idris-ach2002/Megablast}{Megablast} + \cvhref{https://github.com/idris-ach2002/Composant_BCM4JAVA}{Composant\_BCM4JAVA}}
+
+\end{tcolorbox}
+\vspace{0.3cm}
+\begin{tcolorbox}[colback=soft,arc=2.8mm]
+\sectiontitle{Qualités}
+\begin{center}
+\softchip{Autonomie}\hspace{7pt}\softchip{Rigueur / qualité}\par\vspace{2.4pt}
+\softchip{Engagement}\hspace{7pt}\softchip{Priorisation}\par\vspace{2.4pt}
+\softchip{Communication technique}\par\vspace{2.4pt}
+\softchip{Travail en équipe}\par\vspace{2.4pt}
+\softchip{Sens des responsabilités}
+\end{center}
+\end{tcolorbox}
+\end{minipage}
+\hfill
+\begin{minipage}[t]{0.642\textwidth}\vspace{0pt}
+\begin{tcolorbox}[colback=white,colframe=line,boxrule=0.75pt,arc=2.8mm,top=7pt,bottom=8pt,left=8pt,right=8pt]
+\sectiontitle{Expérience et projets récents}
+
+
+\experienceentry
+  {Stage développement logiciel / data \textbar\ LITIS, Université Du Havre {\color{muted}\fontsize{9.09}{9.45}\selectfont\cvhref{https://github.com/idris-ach2002/ais-java-2025/tree/main/Ais_Project}{ais-java}\enspace|\enspace\cvhref{https://github.com/idris-ach2002/AIS_WEBSITE}{AIS\_WEBSITE}\enspace|\enspace\cvhref{https://github.com/idris-ach2002/bdd-ais}{bdd-ais}}}
+  {avr. 2025 - juin 2025}
+  {Java 21 · Python3 · API REST · Symfony · PostgreSQL · Linux}
+  {\begin{itemize}
+    \item \textbf{Backend Java / REST} : ingestion AIS, traitements structurés, archivage, reconnexion automatique et robustesse d'exécution.
+    \vspace{0.08cm}
+    \item \textbf{Base PostgreSQL} : modélisation, scripts Python / Bash, logs, insertion bulk, triggers et exploitation des données métier.
+    \vspace{0.08cm}
+  \end{itemize}}
+\experienceentry
+  {Projet binôme fullstack / DevOps \textbar\ Portfolio professionnel {\color{muted}\fontsize{9.09}{9.45}\selectfont\cvhref{https://github.com/idris-ach2002/professional_website}{back}\enspace|\enspace\cvhref{https://github.com/idris-ach2002/professional_website_front}{front}}}
+  {été 2026}
+  {Spring Boot · JPA · Flyway · React · Docker · PostgreSQL cloud}
+  {\begin{itemize}
+    \item \textbf{Application web} : API REST, persistance JPA, migrations Flyway, validation, déploiement Docker et front React moderne.
+    \vspace{0.08cm}
+  \end{itemize}}
+
+\vspace{-2pt}
+\noindent\begin{tabularx}{\linewidth}{@{}X>{\RaggedLeft\arraybackslash}p{2.28cm}@{}}
+{\bfseries\fontsize{11.2}{11.2}\selectfont Assistant logistique / préparateur de commandes \textbar\ La Belle Vie / Deleev} & {\color{accent!95!black}\bfseries\fontsize{9.5}{9.7}\selectfont nov. 2025 - présent}
+\end{tabularx}\par
+{\color{muted}\fontsize{10}{10}\selectfont CDI étudiant \textbar\ sérieux, autonomie, accompagnement d'équipe}\par\vspace{3pt}
+
+\end{tcolorbox}
+\vspace{0.04cm}
+\begin{tcolorbox}[colback=white,colframe=line,boxrule=0.75pt,arc=2.8mm,top=6pt,bottom=6pt,left=8pt,right=8pt]
+\sectiontitle{Réalisations académiques ciblées}
+
+\projectentry
+  {Visualisation de graphes haute performance}{Java, JavaFX, JOGL, C, JNI}
+  {Architecture modulaire, séparation UI / moteur natif, rendu OpenGL et interopération Java / C via JNI.}
+  {\cvhref{https://github.com/idris-ach2002/PSTL_25_visualisation_graphes}{repo GitHub}}
+  \vspace{0.06cm}
+
+\projectentry
+  {Algorithmique : compresseur UTF-8 par Huffman dynamique}{Java, algorithmique, I/O bits}
+  {Compression / décompression, arbres adaptatifs, lecture bit-à-bit et mesures de performance.}
+  {\cvhref{https://github.com/idris-ach2002/Huffman_dynamique}{repo GitHub}}
+  \vspace{0.06cm}
+
+\projectentry
+  {Système modulaire par composants distribués}{Java, concurrence, asynchronisme, RMI}
+  {Interfaces de services, communication inter-composants, synchronisation sûre et déploiement réparti sur plusieurs JVM.}
+  {\cvhref{https://github.com/idris-ach2002/Composant_BCM4JAVA}{repo GitHub}}
+  \vspace{0.06cm}
+
+\projectentry
+  {Jeu 2D type Xenon 2 : Megablast}{Haskell, Gloss, QuickCheck, Hspec}
+  {Modélisation sûre, séparation logique / effets, tests de propriétés et validation d'invariants métier.}
+  {\cvhref{https://github.com/idris-ach2002/Megablast}{repo GitHub}}
+  \vspace{0.06cm}
+
+\end{tcolorbox}
+\vspace{0.04cm}
+\begin{tcolorbox}[colback=white,colframe=line,boxrule=0.7pt,arc=2.7mm,top=7pt,bottom=9pt,left=8pt,right=8pt]
+\sectiontitle{Formation}
+\noindent
+\begin{minipage}[c]{0.12\linewidth}\centering\schoollogo{sorbonne.png}{1.15cm}\end{minipage}\hfill
+\begin{minipage}[c]{0.84\linewidth}\vspace{0.8cm}
+\entrytitle{Master Informatique - parcours Science et Technologie du Logiciel}{2025 - 2027}{\schoolbadge{SU}{Sorbonne Université}}
+{\color{muted}\fontsize{9.24}{9.66}\selectfont\cvhref{https://sciences.sorbonne-universite.fr/formation-sciences/masters/master-informatique/parcours-stl}{parcours officiel}\enspace|\enspace\cvhref{https://sciences.sorbonne-universite.fr/sites/default/files/media/2025-06/MonMaster-Informatique-STL-arr\%C3\%AAt\%C3\%A9-sign\%C3\%A9-2024.pdf}{maquette / arrêté}}\par
+{\fontsize{10}{10}\selectfont Formation orientée \textbf{ingénierie logicielle} : fiabilité du logiciel, tests, programmation web, concurrence, génie logiciel et environnements de développement.}\par
+\end{minipage}
+
+\vspace{1cm}
+
+\begin{minipage}[c]{0.12\linewidth}\centering\schoollogo{ulhn.jpg}{1.28cm}\end{minipage}\hfill
+\begin{minipage}[c]{0.84\linewidth}
+\entrytitle{Licence Informatique - mention Très Bien}{2022 - 2025}{\schoolbadge{ULHN}{Université Le Havre Normandie}}
+{\color{muted}\fontsize{9.24}{9.66}\selectfont\cvhref{https://www.univ-lehavre.fr/fr/formations/licence-informatique/}{parcours officiel}\enspace|\enspace\cvhref{https://www.univ-lehavre.fr/wp-content/uploads/2023/12/licenceinfo2022-1.pdf}{fiche / programme}}\par
+{\fontsize{10}{10}\selectfont enseignement \textbf{théorique et pratique}, appuyé par un stage de fin de cursus. bases de données, IHM, systèmes, algorithme, génie logiciel et développement web.}\par
+\vspace{0.8cm}
+\end{minipage}
+\end{tcolorbox}
+\end{minipage}
+\end{minipage}}}
+\end{document}
