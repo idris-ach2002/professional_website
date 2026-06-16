@@ -15,7 +15,10 @@ import sorbonne.professional_website.dto.request.ProfileRequestDTO;
 import sorbonne.professional_website.dto.request.ProjectRequestDTO;
 import sorbonne.professional_website.dto.request.TimelineRequestDTO;
 import sorbonne.professional_website.dto.request.WebsiteVersionRequestDTO;
+import sorbonne.professional_website.dto.request.PortfolioRestoreRequestDTO;
 import sorbonne.professional_website.dto.response.ProjectResponseDTO;
+import sorbonne.professional_website.dto.response.PortfolioBackupResponseDTO;
+import sorbonne.professional_website.dto.response.PortfolioHealthReportResponseDTO;
 import sorbonne.professional_website.dto.response.WebsiteVersionResponseDTO;
 import sorbonne.professional_website.service.WebsiteVersionService;
 
@@ -51,6 +54,48 @@ public class WebsiteVersionAdminController {
             @PathVariable Long versionId
     ) {
         return ResponseEntity.ok(srvWebsiteVersion.getVersion(ownerId, versionId));
+    }
+
+
+    @GetMapping("/{versionId}/health")
+    public ResponseEntity<PortfolioHealthReportResponseDTO> getHealthReport(
+            @PathVariable Long ownerId,
+            @PathVariable Long versionId
+    ) {
+        return ResponseEntity.ok(srvWebsiteVersion.getHealthReport(ownerId, versionId));
+    }
+
+    @GetMapping("/{versionId}/publish-validation")
+    public ResponseEntity<PortfolioHealthReportResponseDTO> validateBeforePublish(
+            @PathVariable Long ownerId,
+            @PathVariable Long versionId
+    ) {
+        return ResponseEntity.ok(srvWebsiteVersion.validateBeforePublish(ownerId, versionId));
+    }
+
+    @PutMapping("/{versionId}/activate-validated")
+    public ResponseEntity<WebsiteVersionResponseDTO> activateVersionAfterValidation(
+            @PathVariable Long ownerId,
+            @PathVariable Long versionId
+    ) {
+        return ResponseEntity.ok(srvWebsiteVersion.activateVersionAfterValidation(ownerId, versionId));
+    }
+
+    @PostMapping("/{versionId}/backup/export")
+    public ResponseEntity<PortfolioBackupResponseDTO> exportVersionBackup(
+            @PathVariable Long ownerId,
+            @PathVariable Long versionId
+    ) {
+        return ResponseEntity.ok(srvWebsiteVersion.exportVersionBackup(ownerId, versionId));
+    }
+
+    @PostMapping("/backup/restore")
+    public ResponseEntity<WebsiteVersionResponseDTO> restoreVersionBackup(
+            @PathVariable Long ownerId,
+            @RequestBody @Valid PortfolioRestoreRequestDTO requestDTO
+    ) {
+        WebsiteVersionResponseDTO restoredVersion = srvWebsiteVersion.restoreVersionBackup(ownerId, requestDTO);
+        return ResponseEntity.status(HttpStatus.CREATED).body(restoredVersion);
     }
 
     @PostMapping

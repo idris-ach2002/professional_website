@@ -1,15 +1,22 @@
 package sorbonne.professional_website.service;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.persistence.EntityNotFoundException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import sorbonne.professional_website.dto.request.ProfileRequestDTO;
+import sorbonne.professional_website.dto.request.PortfolioRestoreRequestDTO;
 import sorbonne.professional_website.dto.request.ProjectRequestDTO;
 import sorbonne.professional_website.dto.request.TimelineRequestDTO;
 import sorbonne.professional_website.dto.request.WebsiteVersionRequestDTO;
 import sorbonne.professional_website.dto.response.ProjectResponseDTO;
+import sorbonne.professional_website.dto.response.PortfolioBackupResponseDTO;
+import sorbonne.professional_website.dto.response.PortfolioHealthCheckResponseDTO;
+import sorbonne.professional_website.dto.response.PortfolioHealthReportResponseDTO;
 import sorbonne.professional_website.dto.response.WebsiteVersionResponseDTO;
 import sorbonne.professional_website.entity.Experience;
+import sorbonne.professional_website.entity.ContactInfo;
 import sorbonne.professional_website.entity.Owner;
 import sorbonne.professional_website.entity.Profile;
 import sorbonne.professional_website.entity.Project;
@@ -20,12 +27,24 @@ import sorbonne.professional_website.mapper.ProfileMapper;
 import sorbonne.professional_website.mapper.ProjectMapper;
 import sorbonne.professional_website.mapper.TimelineMapper;
 import sorbonne.professional_website.mapper.WebsiteVersionMapper;
+import sorbonne.professional_website.upload.StorageService;
+import sorbonne.professional_website.upload.StoredFile;
 import sorbonne.professional_website.repository.OwnerRepository;
 import sorbonne.professional_website.repository.ProjectRepository;
 import sorbonne.professional_website.repository.WebsiteVersionRepository;
 
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipOutputStream;
+import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 @Service
 @Transactional
@@ -34,15 +53,21 @@ public class WebsiteVersionService {
     private final OwnerRepository rpOwner;
     private final WebsiteVersionRepository rpWebsiteVersion;
     private final ProjectRepository rpProject;
+    private final StorageService storageService;
+    private final ObjectMapper objectMapper;
 
     public WebsiteVersionService(
             OwnerRepository rpOwner,
             WebsiteVersionRepository rpWebsiteVersion,
-            ProjectRepository rpProject
+            ProjectRepository rpProject,
+            StorageService storageService,
+            ObjectMapper objectMapper
     ) {
         this.rpOwner = rpOwner;
         this.rpWebsiteVersion = rpWebsiteVersion;
         this.rpProject = rpProject;
+        this.storageService = storageService;
+        this.objectMapper = objectMapper;
     }
 
     @Transactional(readOnly = true)
@@ -260,6 +285,325 @@ public class WebsiteVersionService {
         }
 
         rpWebsiteVersion.delete(version);
+    }
+
+
+    @Transactional(readOnly = true)
+    public PortfolioHealthReportResponseDTO getHealthReport(Long ownerId, Long versionId) {
+        WebsiteVersion version = findVersionByOwner(ownerId, versionId);
+        return buildHealthReport(ownerId, versionId, version);
+    }
+
+    @Transactional(readOnly = true)
+    public PortfolioHealthReportResponseDTO validateBeforePublish(Long ownerId, Long versionId) {
+        WebsiteVersion version = findVersionByOwner(ownerId, versionId);
+        return buildHealthReport(ownerId, versionId, version);
+    }
+
+    public WebsiteVersionResponseDTO activateVersionAfterValidation(Long ownerId, Long versionId) {
+        lockOwner(ownerId);
+        WebsiteVersion version = findVersionByOwner(ownerId, versionId);
+        PortfolioHealthReportResponseDTO report = buildHealthReport(ownerId, versionId, version);
+        if (!report.publishable()) {
+            throw new IllegalStateException("Publication bloquée : corrige les erreurs critiques avant activation.");
+        }
+        return activateVersion(ownerId, versionId);
+    }
+
+    @Transactional(readOnly = true)
+    public PortfolioBackupResponseDTO exportVersionBackup(Long ownerId, Long versionId) {
+        WebsiteVersion version = findVersionByOwner(ownerId, versionId);
+        String filename = buildBackupFilename(version);
+        String json = buildBackupJson(ownerId, version);
+        byte[] zipBytes = buildBackupZip(json, version);
+        StoredFile storedFile = storageService.storeBytes(filename, zipBytes);
+        return new PortfolioBackupResponseDTO(
+                true,
+                filename,
+                publicUrl(storedFile),
+                json,
+                zipBytes.length,
+                LocalDateTime.now(),
+                ownerId,
+                versionId
+        );
+    }
+
+    public WebsiteVersionResponseDTO restoreVersionBackup(Long ownerId, PortfolioRestoreRequestDTO requestDTO) {
+        if (requestDTO == null) {
+            throw new IllegalArgumentException("Backup vide.");
+        }
+
+        WebsiteVersionRequestDTO restoredRequest = requestDTO.version();
+        if (restoredRequest == null && requestDTO.backupJson() != null && !requestDTO.backupJson().isBlank()) {
+            restoredRequest = readVersionRequestFromBackupJson(requestDTO.backupJson());
+        }
+
+        if (restoredRequest == null) {
+            throw new IllegalArgumentException("Le backup ne contient aucune version restaurable.");
+        }
+
+        String label = defaultIfBlank(requestDTO.restoreLabel(), defaultIfBlank(restoredRequest.label(), "Version restaurée") + " — restaurée");
+        WebsiteVersionRequestDTO finalRequest = new WebsiteVersionRequestDTO(
+                defaultIfBlank(restoredRequest.versionTag(), buildDefaultTag(lockOwner(ownerId))) + "-restore",
+                label,
+                restoredRequest.description(),
+                Boolean.TRUE.equals(requestDTO.active()),
+                restoredRequest.published(),
+                restoredRequest.prof(),
+                restoredRequest.timeline(),
+                restoredRequest.projects()
+        );
+
+        return createVersion(ownerId, finalRequest);
+    }
+
+    private PortfolioHealthReportResponseDTO buildHealthReport(Long ownerId, Long versionId, WebsiteVersion version) {
+        List<PortfolioHealthCheckResponseDTO> checks = new ArrayList<>();
+
+        Profile profile = version.getProfile();
+        Timeline timeline = version.getTimeline();
+        List<Project> versionProjects = version.getProjects() == null ? List.of() : version.getProjects();
+        List<Experience> versionExperiences = timeline == null || timeline.getExperiences() == null ? List.of() : timeline.getExperiences();
+        Owner owner = version.getOwner();
+
+        addCheck(checks, "profile.title", "Titre du profil", "BLOCKER", !isBlank(profile == null ? null : profile.getTitle()), "Le profil doit avoir un titre public.");
+        addCheck(checks, "profile.description", "Description du profil", "BLOCKER", !isBlank(profile == null ? null : profile.getDescription()), "La description publique du profil est obligatoire.");
+        addCheck(checks, "profile.cv", "CV attaché", "WARNING", profile != null && !isBlank(profile.getCvUrl()), "Aucun CV n'est attaché à cette version.");
+        addCheck(checks, "timeline", "Timeline", "BLOCKER", timeline != null && !versionExperiences.isEmpty(), "La timeline doit contenir au moins une expérience ou formation.");
+        addCheck(checks, "projects.published", "Projets publiés", "BLOCKER", versionProjects.stream().anyMatch(project -> project.getPublished() == null || Boolean.TRUE.equals(project.getPublished())), "Au moins un projet publié est nécessaire.");
+        addCheck(checks, "projects.featured", "Projet mis en avant", "WARNING", versionProjects.stream().anyMatch(project -> Boolean.TRUE.equals(project.getFeatured())), "Aucun projet n'est marqué comme featured.");
+        addCheck(checks, "assets.profile", "Image profil", "SUGGESTION", profile != null && !isBlank(profile.getProfileImageUrl()), "Ajoute une image de profil pour un rendu public plus professionnel.");
+        addCheck(checks, "contacts.email", "Contact email", "BLOCKER", owner != null && hasContact(owner, "EMAIL"), "Ajoute un email dans les contacts owner.");
+        addCheck(checks, "contacts.github", "Lien GitHub", "WARNING", owner != null && hasContact(owner, "GITHUB"), "Ajoute un lien GitHub dans les contacts owner.");
+        addCheck(checks, "links.projects", "Liens projets", "SUGGESTION", versionProjects.stream().anyMatch(project -> !isBlank(project.getGithubUrl()) || !isBlank(project.getDocumentationUrl())), "Ajoute au moins un lien GitHub ou documentation sur les projets publiés.");
+        addCheck(checks, "version.published", "Version publiée", "WARNING", Boolean.TRUE.equals(version.getPublished()), "La version n'est pas marquée comme published.");
+        addCheck(checks, "version.active", "Version active", "SUGGESTION", Boolean.TRUE.equals(version.getActive()), "La version n'est pas active. Utilise la validation avant publication.");
+        addCheck(checks, "dates.experiences", "Dates expériences", "WARNING", versionExperiences.stream().allMatch(experience -> experience.getStartDate() != null), "Certaines expériences n'ont pas de date de début.");
+        addCheck(checks, "projects.images", "Images projets", "SUGGESTION", versionProjects.stream().filter(project -> project.getPublished() == null || Boolean.TRUE.equals(project.getPublished())).allMatch(project -> !isBlank(project.getImageUrl())), "Certains projets publiés n'ont pas d'image.");
+
+        long blockers = checks.stream().filter(check -> "BLOCKER".equals(check.severity()) && "FAIL".equals(check.status())).count();
+        long warnings = checks.stream().filter(check -> "WARNING".equals(check.severity()) && "FAIL".equals(check.status())).count();
+        long suggestions = checks.stream().filter(check -> "SUGGESTION".equals(check.severity()) && "FAIL".equals(check.status())).count();
+        int score = Math.max(0, 100 - (int) blockers * 30 - (int) warnings * 8 - (int) suggestions * 3);
+
+        return new PortfolioHealthReportResponseDTO(
+                score,
+                blockers == 0,
+                (int) blockers,
+                (int) warnings,
+                (int) suggestions,
+                checks,
+                LocalDateTime.now(),
+                ownerId,
+                versionId
+        );
+    }
+
+    private void addCheck(List<PortfolioHealthCheckResponseDTO> checks, String id, String label, String severity, boolean pass, String failureMessage) {
+        checks.add(new PortfolioHealthCheckResponseDTO(
+                id,
+                label,
+                severity,
+                pass ? "PASS" : "FAIL",
+                pass ? "OK" : failureMessage
+        ));
+    }
+
+    private boolean hasContact(Owner owner, String type) {
+        if (owner.getContacts() == null) {
+            return false;
+        }
+        return owner.getContacts().stream()
+                .filter(Objects::nonNull)
+                .anyMatch(contact -> contact.getType() != null && type.equals(contact.getType().name()) && !isBlank(contact.getValue()));
+    }
+
+    private String buildBackupJson(Long ownerId, WebsiteVersion version) {
+        try {
+            Map<String, Object> payload = new LinkedHashMap<>();
+            Owner owner = version.getOwner();
+            WebsiteVersionRequestDTO versionRequest = toVersionRequest(version);
+            payload.put("format", "portfolio-backup-v1");
+            payload.put("generatedAt", LocalDateTime.now().toString());
+            payload.put("ownerId", ownerId);
+            payload.put("sourceVersionId", version.getId());
+            payload.put("owner", toOwnerBackupMap(owner));
+            payload.put("versionRequest", versionRequest);
+            payload.put("exportedVersion", WebsiteVersionMapper.toResponse(version));
+            payload.put("health", buildHealthReport(ownerId, version.getId(), version));
+            return objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(payload);
+        } catch (IOException exception) {
+            throw new IllegalStateException("Impossible de sérialiser le backup portfolio.", exception);
+        }
+    }
+
+    private Map<String, Object> toOwnerBackupMap(Owner owner) {
+        Map<String, Object> map = new LinkedHashMap<>();
+        if (owner == null) {
+            return map;
+        }
+        map.put("name", owner.getName());
+        map.put("firstName", owner.getFirstName());
+        map.put("age", owner.getAge());
+        map.put("active", owner.getActive());
+        map.put("address", owner.getAddress());
+        map.put("contacts", owner.getContacts() == null ? List.of() : owner.getContacts().stream().map(this::toContactMap).toList());
+        return map;
+    }
+
+    private Map<String, Object> toContactMap(ContactInfo contact) {
+        Map<String, Object> map = new LinkedHashMap<>();
+        map.put("type", contact.getType() == null ? null : contact.getType().name());
+        map.put("value", contact.getValue());
+        return map;
+    }
+
+    private WebsiteVersionRequestDTO toVersionRequest(WebsiteVersion version) {
+        return new WebsiteVersionRequestDTO(
+                version.getVersionTag(),
+                version.getLabel(),
+                version.getDescription(),
+                false,
+                version.getPublished(),
+                toProfileRequest(version.getProfile()),
+                toTimelineRequest(version.getTimeline()),
+                version.getProjects() == null ? List.of() : version.getProjects().stream().map(this::toProjectRequest).toList()
+        );
+    }
+
+    private ProfileRequestDTO toProfileRequest(Profile profile) {
+        if (profile == null) {
+            return null;
+        }
+        return new ProfileRequestDTO(
+                profile.getTitle(),
+                profile.getSubtitle(),
+                profile.getHeadline(),
+                profile.getShortDescription(),
+                profile.getDescription(),
+                profile.getLocation(),
+                profile.getAvailability(),
+                profile.getProfileImageUrl(),
+                profile.getLogoUrl(),
+                profile.getCvUrl(),
+                profile.getPortfolioUrl()
+        );
+    }
+
+    private TimelineRequestDTO toTimelineRequest(Timeline timeline) {
+        if (timeline == null) {
+            return null;
+        }
+        return new TimelineRequestDTO(
+                timeline.getTitle(),
+                timeline.getDescription(),
+                timeline.getExperiences() == null ? List.of() : timeline.getExperiences().stream().map(this::toExperienceRequest).toList()
+        );
+    }
+
+    private sorbonne.professional_website.dto.request.ExperienceRequestDTO toExperienceRequest(Experience experience) {
+        return new sorbonne.professional_website.dto.request.ExperienceRequestDTO(
+                experience.getCategory(),
+                experience.getTitle(),
+                experience.getOrganization(),
+                experience.getLocation(),
+                experience.getSummary(),
+                experience.getDescription(),
+                experience.getStartDate(),
+                experience.getEndDate(),
+                experience.isCurrentPosition(),
+                experience.getImageUrl(),
+                experience.getWebsiteUrl(),
+                experience.getSkills(),
+                experience.getDisplayOrder()
+        );
+    }
+
+    private ProjectRequestDTO toProjectRequest(Project project) {
+        return new ProjectRequestDTO(
+                project.getTitle(),
+                project.getSubtitle(),
+                project.getShortDescription(),
+                project.getDescription(),
+                project.getStatus(),
+                project.getStartDate(),
+                project.getEndDate(),
+                project.getImageUrl(),
+                project.getDemoUrl(),
+                project.getGithubUrl(),
+                project.getDocumentationUrl(),
+                project.getStacks(),
+                project.getFeatures(),
+                project.getLinks() == null ? List.of() : project.getLinks().stream().map(link -> new sorbonne.professional_website.dto.request.ProjectLinkRequestDTO(link.getType(), link.getLabel(), link.getUrl())).toList(),
+                project.getFeatured(),
+                project.getPublished(),
+                project.getDisplayOrder(),
+                null
+        );
+    }
+
+    private WebsiteVersionRequestDTO readVersionRequestFromBackupJson(String backupJson) {
+        try {
+            JsonNode root = objectMapper.readTree(backupJson);
+            JsonNode versionRequestNode = root.get("versionRequest");
+            if (versionRequestNode != null && !versionRequestNode.isNull()) {
+                return objectMapper.treeToValue(versionRequestNode, WebsiteVersionRequestDTO.class);
+            }
+            return objectMapper.treeToValue(root, WebsiteVersionRequestDTO.class);
+        } catch (Exception exception) {
+            throw new IllegalArgumentException("Backup JSON illisible ou incompatible : " + exception.getMessage(), exception);
+        }
+    }
+
+    private byte[] buildBackupZip(String json, WebsiteVersion version) {
+        try (ByteArrayOutputStream buffer = new ByteArrayOutputStream(); ZipOutputStream zip = new ZipOutputStream(buffer, StandardCharsets.UTF_8)) {
+            writeZipEntry(zip, "portfolio.json", json.getBytes(StandardCharsets.UTF_8));
+            writeZipEntry(zip, "metadata.json", ("{\n"
+                    + "  \"format\": \"portfolio-backup-v1\",\n"
+                    + "  \"versionId\": " + version.getId() + ",\n"
+                    + "  \"versionTag\": \"" + escapeJson(version.getVersionTag()) + "\",\n"
+                    + "  \"label\": \"" + escapeJson(version.getLabel()) + "\"\n"
+                    + "}\n").getBytes(StandardCharsets.UTF_8));
+            zip.finish();
+            return buffer.toByteArray();
+        } catch (IOException exception) {
+            throw new IllegalStateException("Impossible de générer le ZIP de backup.", exception);
+        }
+    }
+
+    private void writeZipEntry(ZipOutputStream zip, String name, byte[] bytes) throws IOException {
+        zip.putNextEntry(new ZipEntry(name));
+        zip.write(bytes == null ? new byte[0] : bytes);
+        zip.closeEntry();
+    }
+
+    private String buildBackupFilename(WebsiteVersion version) {
+        String tag = defaultIfBlank(version.getVersionTag(), "version").toLowerCase().replaceAll("[^a-z0-9]+", "-").replaceAll("(^-|-$)", "");
+        return "portfolio-backup-" + defaultIfBlank(tag, "version") + ".zip";
+    }
+
+    private String publicUrl(StoredFile storedFile) {
+        if (storedFile.url() != null && !storedFile.url().isBlank()) {
+            return storedFile.url();
+        }
+        try {
+            return ServletUriComponentsBuilder
+                    .fromCurrentContextPath()
+                    .path("/uploads/files/{filename}")
+                    .buildAndExpand(storedFile.filename())
+                    .toUriString();
+        } catch (IllegalStateException ignored) {
+            return "/uploads/files/" + storedFile.filename();
+        }
+    }
+
+    private String escapeJson(String value) {
+        return value == null ? "" : value.replace("\\", "\\\\").replace("\"", "\\\"");
+    }
+
+    private boolean isBlank(String value) {
+        return value == null || value.isBlank();
     }
 
     private Owner lockOwner(Long ownerId) {
