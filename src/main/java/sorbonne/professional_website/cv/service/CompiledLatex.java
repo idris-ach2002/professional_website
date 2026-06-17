@@ -2,7 +2,7 @@ package sorbonne.professional_website.cv.service;
 
 import java.util.List;
 
-record CompiledLatex(
+public record CompiledLatex(
         boolean success,
         byte[] pdfBytes,
         String logs,
