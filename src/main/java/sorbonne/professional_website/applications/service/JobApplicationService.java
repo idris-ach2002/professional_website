@@ -390,66 +390,85 @@ public class JobApplicationService {
     private String buildCoverLetterLatex(WebsiteVersion version, JobApplication application, String motivationOverride) {
         Owner owner = version.getOwner();
         Profile profile = version.getProfile();
-        String fullName = clean(owner.getFirstName()) + " " + clean(owner.getName());
+        String fullName = nonBlank(clean(owner.getFirstName()) + " " + clean(owner.getName()), "Idris ACHABOU");
         String email = contact(owner, "EMAIL");
         String phone = contact(owner, "PHONE_NUMBER", "PHONE");
-        String linkedin = contact(owner, "LINKEDIN");
-        String portfolio = profile == null ? "" : clean(profile.getPortfolioUrl());
+        String location = nonBlank(profile == null ? null : profile.getLocation(), owner.getAddress());
+        String company = nonBlank(application.getCompanyName(), "votre entreprise");
+        String role = nonBlank(application.getRoleTitle(), "ce poste");
         String headline = nonBlank(profile == null ? null : profile.getHeadline(), profile == null ? "" : profile.getDescription());
         String motivation = nonBlank(motivationOverride, buildMotivationParagraph(application, version));
         String today = LocalDate.now().format(DateTimeFormatter.ofPattern("d MMMM yyyy", Locale.FRANCE));
+        String body = buildDetailedDefaultLetterBody(application, version, motivation, headline);
 
         return """
-                \\documentclass[11pt,a4paper]{article}
-                \\usepackage[margin=1.65cm]{geometry}
+                \\documentclass[10.7pt,a4paper]{article}
+                \\usepackage[a4paper,margin=1.45cm]{geometry}
                 \\usepackage[T1]{fontenc}
                 \\usepackage[utf8]{inputenc}
                 \\usepackage[french]{babel}
-                \\usepackage{xcolor}
-                \\usepackage{hyperref}
-                \\usepackage{microtype}
-                \\usepackage{enumitem}
-                \\definecolor{primary}{HTML}{6E877E}
-                \\definecolor{ink}{HTML}{172026}
-                \\definecolor{muted}{HTML}{607076}
-                \\hypersetup{colorlinks=true,urlcolor=primary,linkcolor=primary}
-                \\setlength{\\parindent}{0pt}
-                \\setlength{\\parskip}{0.72em}
+                \\usepackage[scaled=0.97]{helvet}
                 \\renewcommand{\\familydefault}{\\sfdefault}
+                \\usepackage[protrusion=true,expansion=false]{microtype}
+                \\usepackage{graphicx}
+                \\usepackage{tabularx}
+                \\usepackage{xcolor}
+                \\pagestyle{empty}
+                \\setlength{\\parindent}{0pt}
+                \\setlength{\\parskip}{0pt}
+                \\definecolor{ink}{HTML}{172026}
+                \\definecolor{muted}{HTML}{5E6B70}
                 \\begin{document}
-                {\\Huge\\bfseries\\color{ink} %s}\\par
-                {\\large\\bfseries\\color{primary} Candidature — %s}\\par
-                {\\color{muted}%s \\quad %s \\quad %s \\quad %s}\\par
-                \\vspace{0.8em}
-                \\hrule
-                \\vspace{1.2em}
-                \\begin{flushright}
-                %s, le %s
-                \\end{flushright}
-                \\textbf{Objet : Candidature pour %s — %s}\\par
-                Madame, Monsieur,\\par
-                %s\\par
-                Mon profil s'appuie sur %s. Cette base technique me permet de contribuer à des applications fiables, maintenables et utiles aux utilisateurs.\\par
-                Je serais disponible pour échanger sur cette opportunité et préciser la manière dont mes projets peuvent répondre à vos besoins.\\par
-                Je vous prie d'agréer, Madame, Monsieur, l'expression de mes salutations distinguées.\\par
-                \\vspace{1.5em}
-                \\textbf{%s}
+                \\begin{tabularx}{\\linewidth}{@{}X r@{}}
+                \\textbf{%s} & \\textbf{%s} \\\\
+                \\textbf{%s} & \\\\
+                \\textbf{Téléphone : %s} & \\\\
+                \\textbf{Email : %s} & \\\\
+                \\end{tabularx}
+                
+                \\vspace{0.52cm}
+                {\\Large\\bfseries\\color{ink} Objet : Candidature -- %s}\\par
+                \\vspace{0.52cm}
+                %s
+                \\vspace{0.05cm}
+                \\noindent\\rule{0.92\\linewidth}{0.35pt}
+                \\vspace{0.18cm}
+                \\begin{tabularx}{\\linewidth}{@{}X r@{}}
+                {\\Large %s} & \\IfFileExists{signature.png}{\\includegraphics[width=2.75cm]{signature.png}}{} \\\\
+                \\end{tabularx}
                 \\end{document}
                 """.formatted(
                 escapeLatex(fullName),
-                escapeLatex(clean(application.getRoleTitle())),
-                escapeLatex(email),
-                escapeLatex(phone),
-                latexHref(linkedin, "LinkedIn"),
-                latexHref(portfolio, "Portfolio"),
-                escapeLatex(nonBlank(profile == null ? null : profile.getLocation(), owner.getAddress())),
                 escapeLatex(today),
-                escapeLatex(clean(application.getRoleTitle())),
-                escapeLatex(clean(application.getCompanyName())),
-                escapeLatex(motivation),
-                escapeLatex(shorten(headline, 260)),
+                escapeLatex(nonBlank(location, "Choisy-Le-Roi, 94600")),
+                escapeLatex(nonBlank(phone, "07 44 75 85 10")),
+                escapeLatex(nonBlank(email, "achabou02idris@gmail.com")),
+                escapeLatex(role),
+                body,
                 escapeLatex(fullName)
         );
+    }
+
+    private String buildDetailedDefaultLetterBody(JobApplication application, WebsiteVersion version, String motivation, String headline) {
+        String company = nonBlank(application.getCompanyName(), "votre entreprise");
+        String role = nonBlank(application.getRoleTitle(), "ce poste");
+        String projectProof = version.getProjects() == null ? "mes projets de développement logiciel" : version.getProjects().stream()
+                .filter(project -> Boolean.TRUE.equals(project.getPublished()))
+                .sorted(Comparator.comparing(project -> project.getDisplayOrder() == null ? 999 : project.getDisplayOrder()))
+                .limit(2)
+                .map(Project::getTitle)
+                .filter(Objects::nonNull)
+                .reduce((a, b) -> a + " et " + b)
+                .orElse("mes projets de développement logiciel");
+        StringBuilder out = new StringBuilder();
+        out.append("Madame, Monsieur,\\par\n\\vspace{0.22cm}\n");
+        out.append(escapeLatex("Actuellement étudiant en Master Informatique - parcours Science et Technologie du Logiciel à Sorbonne Université, je recherche une alternance à partir de septembre 2026. Votre offre de " + role + " a retenu mon attention car elle correspond à mon objectif : contribuer à des applications utiles, fiables et maintenables, dans un cadre technique exigeant où la qualité du code et la compréhension du besoin sont essentielles.")).append("\\par\n\\vspace{0.22cm}\n");
+        out.append(escapeLatex(motivation)).append("\\par\n\\vspace{0.22cm}\n");
+        out.append(escapeLatex("Je peux m’appuyer sur " + projectProof + ", ainsi que sur un profil orienté " + shorten(headline, 190) + ". Ces expériences m’ont appris à structurer un développement, manipuler des données, construire des interfaces ou services exploitables, documenter les choix techniques et garder une attention constante à la robustesse du livrable.")).append("\\par\n\\vspace{0.22cm}\n");
+        out.append(escapeLatex("Rejoindre " + company + " représenterait pour moi une opportunité forte de progresser au contact d’une équipe expérimentée, tout en apportant une contribution sérieuse dès les premières missions. Je serais heureux de pouvoir échanger avec vous afin de vous présenter plus précisément mon parcours, mes réalisations et ma motivation.")).append("\\par\n\\vspace{0.22cm}\n");
+        out.append("{\\small\\textbf{Rythme d’alternance :} Périodes longues (« gros grain ») — Sept.–Oct. : cours et examens ; Nov.–Janv. : entreprise à 100\\% ; Fév.–Mars : cours ; Avril–Sept. : entreprise à 100\\%.}\\par\n\\vspace{0.22cm}\n");
+        out.append(escapeLatex("Je vous prie d’agréer, Madame, Monsieur, l’expression de mes salutations distinguées.")).append("\\par\n");
+        return out.toString();
     }
 
     private String buildMotivationParagraph(JobApplication application, WebsiteVersion version) {

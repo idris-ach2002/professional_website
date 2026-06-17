@@ -18,8 +18,14 @@ import sorbonne.professional_website.applications.dto.JobApplicationRequest;
 import sorbonne.professional_website.applications.dto.JobApplicationResponse;
 import sorbonne.professional_website.applications.dto.OfferAnalysisRequest;
 import sorbonne.professional_website.applications.dto.OfferAnalysisResponse;
+import sorbonne.professional_website.applications.dto.CvVariantProposalDto;
+import sorbonne.professional_website.applications.dto.LetterTemplateResponse;
+import sorbonne.professional_website.applications.dto.LetterVariantProposalDto;
+import sorbonne.professional_website.applications.dto.SmartApplicationPackResponse;
+import sorbonne.professional_website.applications.dto.SmartOfferAnalysisResponse;
 import sorbonne.professional_website.applications.entity.ApplicationStatus;
 import sorbonne.professional_website.applications.service.JobApplicationService;
+import sorbonne.professional_website.applications.service.SmartApplicationService;
 
 import java.util.List;
 
@@ -28,9 +34,14 @@ import java.util.List;
 public class JobApplicationController {
 
     private final JobApplicationService jobApplicationService;
+    private final SmartApplicationService smartApplicationService;
 
-    public JobApplicationController(JobApplicationService jobApplicationService) {
+    public JobApplicationController(
+            JobApplicationService jobApplicationService,
+            SmartApplicationService smartApplicationService
+    ) {
         this.jobApplicationService = jobApplicationService;
+        this.smartApplicationService = smartApplicationService;
     }
 
     @GetMapping
@@ -123,4 +134,47 @@ public class JobApplicationController {
     ) {
         return ResponseEntity.ok(jobApplicationService.exportApplicationZip(ownerId, applicationId, request));
     }
+
+
+    @GetMapping("/letter-templates")
+    public ResponseEntity<List<LetterTemplateResponse>> listLetterTemplates(@PathVariable Long ownerId) {
+        return ResponseEntity.ok(smartApplicationService.listLetterTemplates());
+    }
+
+    @PostMapping("/{applicationId}/analyze-smart")
+    public ResponseEntity<SmartOfferAnalysisResponse> analyzeSmart(
+            @PathVariable Long ownerId,
+            @PathVariable Long applicationId,
+            @RequestParam(required = false) Long versionId
+    ) {
+        return ResponseEntity.ok(smartApplicationService.analyzeSmart(ownerId, applicationId, versionId));
+    }
+
+    @PostMapping("/{applicationId}/generate-cv-variants")
+    public ResponseEntity<List<CvVariantProposalDto>> generateCvVariants(
+            @PathVariable Long ownerId,
+            @PathVariable Long applicationId,
+            @RequestParam(required = false) Long versionId
+    ) {
+        return ResponseEntity.ok(smartApplicationService.generateCvVariants(ownerId, applicationId, versionId));
+    }
+
+    @PostMapping("/{applicationId}/generate-letter-variants")
+    public ResponseEntity<List<LetterVariantProposalDto>> generateLetterVariants(
+            @PathVariable Long ownerId,
+            @PathVariable Long applicationId,
+            @RequestParam(required = false) Long versionId
+    ) {
+        return ResponseEntity.ok(smartApplicationService.generateLetterVariants(ownerId, applicationId, versionId));
+    }
+
+    @PostMapping("/{applicationId}/smart-pack")
+    public ResponseEntity<SmartApplicationPackResponse> exportSmartPack(
+            @PathVariable Long ownerId,
+            @PathVariable Long applicationId,
+            @RequestParam(required = false) Long versionId
+    ) {
+        return ResponseEntity.ok(smartApplicationService.exportSmartPack(ownerId, applicationId, versionId));
+    }
+
 }
