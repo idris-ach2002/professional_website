@@ -78,7 +78,7 @@ public class CvLatexTemplateService {
                 .append("\\usepackage[french]{babel}\n")
                 .append("\\usepackage[scaled=0.97]{helvet}\n")
                 .append("\\renewcommand{\\familydefault}{\\sfdefault}\n")
-                .append("\\usepackage{microtype}\n")
+                .append("\\usepackage[protrusion=true,expansion=false]{microtype}\n")
                 .append("\\usepackage{xcolor}\n")
                 .append("\\usepackage{enumitem}\n")
                 .append("\\usepackage{graphicx}\n")
