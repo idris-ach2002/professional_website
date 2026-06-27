@@ -532,10 +532,14 @@ public class WebsiteVersionService {
                 project.getImageUrl(),
                 project.getDemoUrl(),
                 project.getGithubUrl(),
+                project.getArchitectureUrl(),
                 project.getDocumentationUrl(),
+                project.getSlug(),
                 project.getStacks(),
                 project.getFeatures(),
                 project.getLinks() == null ? List.of() : project.getLinks().stream().map(link -> new sorbonne.professional_website.dto.request.ProjectLinkRequestDTO(link.getType(), link.getLabel(), link.getUrl())).toList(),
+                project.getProofTags(),
+                ProjectMapper.toCaseStudyRequest(project),
                 project.getFeatured(),
                 project.getPublished(),
                 project.getDisplayOrder(),
@@ -702,10 +706,24 @@ public class WebsiteVersionService {
                     .imageUrl(sourceProject.getImageUrl())
                     .demoUrl(sourceProject.getDemoUrl())
                     .githubUrl(sourceProject.getGithubUrl())
+                    .architectureUrl(sourceProject.getArchitectureUrl())
                     .documentationUrl(sourceProject.getDocumentationUrl())
+                    .slug(sourceProject.getSlug())
                     .stacks(sourceProject.getStacks() == null ? new ArrayList<>() : new ArrayList<>(sourceProject.getStacks()))
                     .features(sourceProject.getFeatures() == null ? new ArrayList<>() : new ArrayList<>(sourceProject.getFeatures()))
                     .links(copyProjectLinks(sourceProject.getLinks()))
+                    .proofTags(sourceProject.getProofTags() == null ? new ArrayList<>() : new ArrayList<>(sourceProject.getProofTags()))
+                    .caseStudyProblem(sourceProject.getCaseStudyProblem())
+                    .caseStudyContext(sourceProject.getCaseStudyContext())
+                    .caseStudyRole(sourceProject.getCaseStudyRole())
+                    .caseStudyArchitecture(sourceProject.getCaseStudyArchitecture())
+                    .caseStudyTechnicalChoices(sourceProject.getCaseStudyTechnicalChoices() == null ? new ArrayList<>() : new ArrayList<>(sourceProject.getCaseStudyTechnicalChoices()))
+                    .caseStudyChallenges(sourceProject.getCaseStudyChallenges() == null ? new ArrayList<>() : new ArrayList<>(sourceProject.getCaseStudyChallenges()))
+                    .caseStudySolutions(sourceProject.getCaseStudySolutions() == null ? new ArrayList<>() : new ArrayList<>(sourceProject.getCaseStudySolutions()))
+                    .caseStudyOutcomes(sourceProject.getCaseStudyOutcomes() == null ? new ArrayList<>() : new ArrayList<>(sourceProject.getCaseStudyOutcomes()))
+                    .caseStudyResults(sourceProject.getCaseStudyResults() == null ? new ArrayList<>() : new ArrayList<>(sourceProject.getCaseStudyResults()))
+                    .caseStudyLimits(sourceProject.getCaseStudyLimits() == null ? new ArrayList<>() : new ArrayList<>(sourceProject.getCaseStudyLimits()))
+                    .caseStudyNextSteps(sourceProject.getCaseStudyNextSteps())
                     .featured(sourceProject.getFeatured())
                     .published(sourceProject.getPublished())
                     .displayOrder(sourceProject.getDisplayOrder())
