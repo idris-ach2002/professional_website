@@ -59,8 +59,14 @@ public class Project {
     @Column(name = "github_url", length = 512)
     private String githubUrl;
 
+    @Column(name = "architecture_url", length = 512)
+    private String architectureUrl;
+
     @Column(name = "documentation_url", length = 512)
     private String documentationUrl;
+
+    @Column(name = "slug", length = 180)
+    private String slug;
 
     @ElementCollection(fetch = FetchType.EAGER)
     @CollectionTable(
@@ -87,6 +93,84 @@ public class Project {
     )
     @Builder.Default
     private List<ProjectLink> links = new ArrayList<>();
+
+    @ElementCollection(fetch = FetchType.EAGER)
+    @CollectionTable(
+            name = "project_proof_tags",
+            joinColumns = @JoinColumn(name = "project_id")
+    )
+    @Column(name = "proof_tag", length = 100, nullable = false)
+    @Builder.Default
+    private List<String> proofTags = new ArrayList<>();
+
+    @Column(name = "case_study_problem", columnDefinition = "TEXT")
+    private String caseStudyProblem;
+
+    @Column(name = "case_study_context", columnDefinition = "TEXT")
+    private String caseStudyContext;
+
+    @Column(name = "case_study_role", columnDefinition = "TEXT")
+    private String caseStudyRole;
+
+    @Column(name = "case_study_architecture", columnDefinition = "TEXT")
+    private String caseStudyArchitecture;
+
+    @ElementCollection(fetch = FetchType.EAGER)
+    @CollectionTable(
+            name = "project_case_study_technical_choices",
+            joinColumns = @JoinColumn(name = "project_id")
+    )
+    @Column(name = "technical_choice", length = 500, nullable = false)
+    @Builder.Default
+    private List<String> caseStudyTechnicalChoices = new ArrayList<>();
+
+    @ElementCollection(fetch = FetchType.EAGER)
+    @CollectionTable(
+            name = "project_case_study_challenges",
+            joinColumns = @JoinColumn(name = "project_id")
+    )
+    @Column(name = "challenge", length = 500, nullable = false)
+    @Builder.Default
+    private List<String> caseStudyChallenges = new ArrayList<>();
+
+    @ElementCollection(fetch = FetchType.EAGER)
+    @CollectionTable(
+            name = "project_case_study_solutions",
+            joinColumns = @JoinColumn(name = "project_id")
+    )
+    @Column(name = "solution", length = 500, nullable = false)
+    @Builder.Default
+    private List<String> caseStudySolutions = new ArrayList<>();
+
+    @ElementCollection(fetch = FetchType.EAGER)
+    @CollectionTable(
+            name = "project_case_study_outcomes",
+            joinColumns = @JoinColumn(name = "project_id")
+    )
+    @Column(name = "outcome", length = 500, nullable = false)
+    @Builder.Default
+    private List<String> caseStudyOutcomes = new ArrayList<>();
+
+    @ElementCollection(fetch = FetchType.EAGER)
+    @CollectionTable(
+            name = "project_case_study_results",
+            joinColumns = @JoinColumn(name = "project_id")
+    )
+    @Column(name = "result", length = 500, nullable = false)
+    @Builder.Default
+    private List<String> caseStudyResults = new ArrayList<>();
+
+    @ElementCollection(fetch = FetchType.EAGER)
+    @CollectionTable(
+            name = "project_case_study_limits",
+            joinColumns = @JoinColumn(name = "project_id")
+    )
+    @Column(name = "project_limit", length = 500, nullable = false)
+    @Builder.Default
+    private List<String> caseStudyLimits = new ArrayList<>();
+
+    @Column(name = "case_study_next_steps", columnDefinition = "TEXT")
+    private String caseStudyNextSteps;
 
     @Column(name = "featured", nullable = false)
     @Builder.Default
