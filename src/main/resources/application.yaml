@@ -67,12 +67,16 @@ app:
     # Local dev Vite: http://localhost:5173
     # Local preview Vite: http://localhost:4173
     # Production Cloudflare: https://professional-website-front.achabou02idris.workers.dev
-    allowed-origins: ${APP_CORS_ALLOWED_ORIGINS:${APP_CORS_ALLOWED_ORIGIN:http://localhost:5173,http://localhost:4173,https://professional-website-front.achabou02idris.workers.dev}}
+    allowed-origins: ${APP_CORS_ALLOWED_ORIGINS:${APP_CORS_ALLOWED_ORIGIN:http://localhost:5173,http://localhost:4173,https://professional-website-front.achabou02idris.workers.dev,https://idris-achabou.fit}}
+
+  analytics:
+    # Secret utilisé pour hasher les IDs visiteurs/sessions avant stockage.
+    hash-secret: ${APP_ANALYTICS_HASH_SECRET:${PORTFOLIO_ADMIN_PASSWORD:local-analytics-secret}}
   frontend:
     # Origine utilisée comme fallback quand aucune URL redirect valide n'est fournie.
-    origin: ${APP_FRONTEND_ORIGIN:https://professional-website-front.achabou02idris.workers.dev}
+    origin: ${APP_FRONTEND_ORIGIN:https://idris-achabou.fit}
     # Origines acceptées pour les redirections post-login.
-    allowed-origins: ${APP_FRONTEND_ALLOWED_ORIGINS:${APP_CORS_ALLOWED_ORIGINS:${APP_CORS_ALLOWED_ORIGIN:http://localhost:5173,http://localhost:4173,https://professional-website-front.achabou02idris.workers.dev}}}
+    allowed-origins: ${APP_FRONTEND_ALLOWED_ORIGINS:${APP_CORS_ALLOWED_ORIGINS:${APP_CORS_ALLOWED_ORIGIN:http://localhost:5173,http://localhost:4173,https://professional-website-front.achabou02idris.workers.dev,https://idris-achabou.fit}}}
 cv:
   generation:
     compiler: ${CV_LATEX_COMPILER:latexmk}

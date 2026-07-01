@@ -30,6 +30,7 @@ class WebSecurityConfig {
             FrontendRedirectService frontendRedirectService
     ) throws Exception {
         http
+                .csrf(csrf -> csrf.ignoringRequestMatchers("/analytics/events"))
                 .cors(cors -> cors.configurationSource(corsConfigurationSource))
                 .authorizeHttpRequests((requests) -> requests
                         .dispatcherTypeMatchers(DispatcherType.ERROR, DispatcherType.FORWARD).permitAll()
@@ -48,6 +49,7 @@ class WebSecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/csrf").authenticated()
 
                         // Public portfolio read endpoints used by the front-office.
+                        .requestMatchers(HttpMethod.POST, "/analytics/events").permitAll()
                         .requestMatchers(HttpMethod.GET, "/website").permitAll()
                         .requestMatchers(HttpMethod.GET, "/website/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/uploads/files/**").permitAll()
