@@ -4,7 +4,7 @@
 
 [![Java](https://img.shields.io/badge/Java-21-b07219)](#stack)
 [![Spring Boot](https://img.shields.io/badge/Spring%20Boot-4.0.6-6db33f)](#stack)
-[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-Neon%20%2F%20local-336791)](#base-de-données)
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-Aiven%20%2F%20local-336791)](#base-de-données)
 [![Docker](https://img.shields.io/badge/Docker-ready-2496ed)](#docker)
 
 ## Sommaire
@@ -44,7 +44,7 @@ Le backend centralise la logique métier du portfolio. Il fournit :
 | Framework | Spring Boot 4.0.6 |
 | API HTTP | Spring Web MVC |
 | Persistance | Spring Data JPA, Hibernate |
-| Base | PostgreSQL local / NeonDB en production |
+| Base | PostgreSQL local / Aiven en production |
 | Validation | Jakarta Bean Validation |
 | Sécurité | Spring Security, CSRF, BCrypt, rôle `ADMIN` |
 | Templates serveur | Thymeleaf pour la page de login et les pages d’erreur |
@@ -429,7 +429,7 @@ SPRING_DATASOURCE_USERNAME=${POSTGRES_USER}
 SPRING_DATASOURCE_PASSWORD=${POSTGRES_PASSWORD}
 ```
 
-En production Render + NeonDB, elles doivent pointer vers NeonDB.
+En production Render + Aiven, elles doivent pointer vers le service Aiven avec `sslmode=require`.
 
 ### Sécurité admin
 
@@ -486,6 +486,8 @@ CV_STORE_LATEX_SOURCE=true
 
 ## Déploiement Render
 
+> Migration depuis Neon : consulter [`MIGRATION-AIVEN.md`](MIGRATION-AIVEN.md).
+
 Le backend est déployable via Docker.
 
 ### Build
@@ -503,9 +505,11 @@ Le Dockerfile réalise :
 ### Variables Render minimales
 
 ```txt
-SPRING_DATASOURCE_URL=jdbc:postgresql://<neon-host>/<db>?sslmode=require
-SPRING_DATASOURCE_USERNAME=<neon-user>
-SPRING_DATASOURCE_PASSWORD=<neon-password>
+SPRING_DATASOURCE_URL=jdbc:postgresql://<aiven-host>:<aiven-port>/defaultdb?sslmode=require
+SPRING_DATASOURCE_USERNAME=avnadmin
+SPRING_DATASOURCE_PASSWORD=<aiven-password>
+DB_POOL_MAX_SIZE=5
+DB_POOL_MIN_IDLE=1
 
 PORTFOLIO_ADMIN_USERNAME=<admin>
 PORTFOLIO_ADMIN_PASSWORD=<password>
@@ -542,7 +546,7 @@ La route est publique en `GET` et ne retourne que l’état de santé minimal de
 Ne jamais commiter :
 
 - `.env` réel ;
-- identifiants NeonDB ;
+- identifiants Aiven PostgreSQL ;
 - credentials Cloudinary ;
 - mot de passe admin ;
 - exports contenant des données personnelles.

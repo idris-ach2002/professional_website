@@ -7,3 +7,7 @@ target
 
 src/main/resources/application-local.yaml
 src/main/resources/application-security.yaml
+# Sauvegardes et configuration locale de migration
+migration-backups
+*.dump
+.env.aiven

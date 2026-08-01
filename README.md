@@ -4,7 +4,7 @@
 
 [![Frontend](https://img.shields.io/badge/frontend-Cloudflare%20Workers-orange)](#déploiement)
 [![Backend](https://img.shields.io/badge/backend-Render%20Docker-purple)](#déploiement)
-[![Database](https://img.shields.io/badge/database-Neon%20PostgreSQL-0ea5e9)](#déploiement)
+[![Database](https://img.shields.io/badge/database-Aiven%20PostgreSQL-0ea5e9)](#déploiement)
 [![Storage](https://img.shields.io/badge/storage-Cloudinary-3448c5)](#déploiement)
 [![Java](https://img.shields.io/badge/Java-21-b07219)](#stack-technique)
 [![React](https://img.shields.io/badge/React-19-61dafb)](#stack-technique)
@@ -33,7 +33,7 @@ Le site n’est pas un portfolio statique. Il repose sur une donnée métier adm
 | Portfolio public | `https://professional-website-front.achabou02idris.workers.dev` |
 | Frontend | Cloudflare Workers Assets |
 | Backend | Render, déploiement Docker |
-| Base de données | NeonDB, PostgreSQL managé |
+| Base de données | Aiven, PostgreSQL managé |
 | Stockage fichiers | Cloudinary |
 | Ping de maintien Render | `https://professional-website-hozo.onrender.com/actuator/health` via cron-job.org |
 
@@ -51,7 +51,7 @@ Frontend React / Vite
 Render
 Backend Spring Boot / Docker
    │
-   ├── NeonDB PostgreSQL
+   ├── Aiven PostgreSQL
    │      └── données relationnelles : owners, versions, profils, timelines, projets, candidatures
    │
    ├── Cloudinary
@@ -100,7 +100,7 @@ Backend Spring Boot / Docker
 | CV Builder | Construction d’un CV LaTeX, preview PDF, sauvegarde, export ZIP, contrôle qualité et compilation asynchrone avec SSE. |
 | Candidatures | Suivi des candidatures, statuts, analyse d’offre, génération de lettres, variantes CV et smart pack. |
 | Sécurité | API manager protégée, rôle `ADMIN`, CSRF sur les méthodes mutantes, CORS restrictif, redirections frontend contrôlées. |
-| Déploiement | Front Cloudflare, back Render Docker, base NeonDB, fichiers Cloudinary, health ping cron-job.org. |
+| Déploiement | Front Cloudflare, back Render Docker, base Aiven, fichiers Cloudinary, health ping cron-job.org. |
 
 ## Lancement local
 
@@ -222,9 +222,9 @@ server:
   port: ${PORT:8080}
 ```
 
-### Base de données — NeonDB PostgreSQL
+### Base de données — Aiven PostgreSQL
 
-En production, Spring Boot se connecte à NeonDB via les variables :
+En production, Spring Boot se connecte à Aiven via les variables :
 
 ```txt
 SPRING_DATASOURCE_URL

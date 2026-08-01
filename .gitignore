@@ -36,3 +36,6 @@ build/
 
 ## Fichiers sensibles
 src/main/resources/application-security.yaml
+# Sauvegardes locales de migration PostgreSQL
+migration-backups/
+*.dump
