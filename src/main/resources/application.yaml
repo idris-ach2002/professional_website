@@ -93,3 +93,9 @@ cv:
     compiler: ${CV_LATEX_COMPILER:latexmk}
     timeout-seconds: ${CV_LATEX_TIMEOUT_SECONDS:45}
     store-latex-source: ${CV_STORE_LATEX_SOURCE:true}
+
+translation:
+  libretranslate:
+    enabled: ${LIBRETRANSLATE_ENABLED:true}
+    base-url: ${LIBRETRANSLATE_BASE_URL:http://localhost:5000}
+    timeout: ${LIBRETRANSLATE_TIMEOUT:45s}

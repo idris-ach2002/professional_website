@@ -114,7 +114,7 @@ docker compose build --no-cache backend
 docker compose up backend
 ```
 
-Cette commande démarre le backend et le service PostgreSQL déclaré dans `docker-compose.yml`. Le backend est exposé sur :
+Cette commande démarre le backend ainsi que PostgreSQL et LibreTranslate déclarés dans `docker-compose.yml`. Le backend est exposé sur :
 
 ```txt
 http://localhost:8080
@@ -280,10 +280,34 @@ professional_website_front/
 ## Notes d’audit
 
 - Le frontend inspecté utilise Three.js / React Three Fiber / Rapier. PixiJS n’est pas présent dans les dépendances de cette version.
-- GSAP est chargé par CDN dans `index.html`, et non par dépendance npm.
-- Flyway est configuré dans `application.yaml`, mais l’archive inspectée ne contient pas de dossier `src/main/resources/db/migration`. Le fichier SQL d’index partiel existe dans `src/main/java/.../sql`; pour une production stricte, il devrait être versionné dans `src/main/resources/db/migration` avec un nom de migration Flyway.
+- GSAP est chargé depuis la dépendance npm et intégré au bundle Vite.
+- Flyway est configuré dans `application.yaml` et les migrations versionnées sont placées dans `src/main/resources/db/migration`.
 - Les fichiers `.env` et secrets ne doivent jamais être commités. Utiliser les fichiers `.env.example` / `.env.local.example` comme base.
 
 ## Licence
 
 Le projet contient un fichier `LICENSE` dans les deux bases de code. Se référer au contenu de ces fichiers pour les conditions exactes.
+
+## V13 — localisation backend et LibreTranslate
+
+Le contenu métier bilingue est désormais géré par Spring Boot et PostgreSQL. Le frontend appelle `GET /website/default?locale=fr|en`; LibreTranslate est réservé à l’administration, et aucune traduction externe n’est exécutée pendant une visite publique.
+
+Le `docker-compose.yml` démarre un conteneur LibreTranslate privé chargé uniquement avec les modèles français et anglais. Les traductions sont relues puis enregistrées avec un statut `DRAFT` ou `PUBLISHED` dans `content_translation`. Une empreinte de la source française empêche l’utilisation d’une traduction devenue obsolète.
+
+Le contrat public contient également un slug stable calculé depuis le titre français, afin que les URLs projet restent identiques en français et en anglais. Une entité n’est servie en anglais que lorsque tous ses champs sont publiés et encore synchronisés avec la source.
+
+Documentation complète : [`V13-LIBRETRANSLATE-LOCALIZATION.md`](./V13-LIBRETRANSLATE-LOCALIZATION.md).
+
+
+
+## V13.1 — traduction automatique par entité et traitement global
+
+Le backend expose désormais :
+
+```http
+POST /api/translations/{contentType}/{contentKey}/auto?locale=en
+```
+
+Cet endpoint protégé charge tous les champs français de l’entité, appelle LibreTranslate, puis persiste le résultat dans `content_translation` avec le statut `DRAFT` ou `PUBLISHED`. L’administration orchestre séquentiellement cet endpoint pour proposer **Traduire tout le site** avec progression et rapport d’échec.
+
+Le traitement global couvre le profil, la timeline, les expériences, les projets et les compétences prouvées. L’API publique continue d’utiliser le français comme fallback si une traduction est absente, incomplète ou obsolète. Documentation : [`V13.1-TRANSLATION-CENTER.md`](./V13.1-TRANSLATION-CENTER.md).

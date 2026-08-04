@@ -23,6 +23,7 @@ public record ProjectResponseDTO(
         List<ProjectLinkResponseDTO> links,
         Boolean featured,
         Boolean published,
-        Integer displayOrder
+        Integer displayOrder,
+        String slug
 ) {
 }

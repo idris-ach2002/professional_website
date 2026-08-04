@@ -459,3 +459,38 @@ Le projet contient deux lockfiles. Pour une CI/CD propre, choisir un seul gestio
 ### Variables publiques Vite
 
 Toute variable préfixée `VITE_` est exposée au navigateur après build. Ne jamais y mettre de secret.
+
+## Localisation V13
+
+### Répartition des responsabilités
+
+- `src/localization/uiMessages.js` : libellés statiques de l’interface uniquement ;
+- `LanguageProvider` : préférence `FR | EN`, paramètre `?lang=en` et liens localisés ;
+- `portfolioApi.js` : transmet `?locale=fr|en` au backend et maintient un cache distinct par langue ;
+- `AdminTranslationPanel.jsx` : preview LibreTranslate, correction, brouillon et publication ;
+- PostgreSQL : source unique des traductions métier publiées.
+
+Le build exécute :
+
+```bash
+npm run check:localization
+```
+
+Ce contrôle vérifie la couverture FR/EN des libellés d’interface, l’absence du dossier historique `src/i18n` et l’absence d’anciens overlays de contenu.
+
+Voir [`V13-LIBRETRANSLATE-LOCALIZATION.md`](./V13-LIBRETRANSLATE-LOCALIZATION.md).
+
+
+
+## V13 — localisation backend et LibreTranslate
+
+Voir [`V13-LIBRETRANSLATE-LOCALIZATION.md`](./V13-LIBRETRANSLATE-LOCALIZATION.md).
+
+
+## V13.1 — centre de traduction global
+
+L’onglet **Traductions** est désormais découpé en sous-onglets Projets, Expériences, Timeline, Profil et Compétences. Chaque catégorie affiche sa liste complète et permet une traduction manuelle ou LibreTranslate champ par champ.
+
+Le bouton **Traduire tout le site** traite en une action tout le contenu métier stocké dans PostgreSQL. Par défaut, il ne retraduit que les éléments absents ou obsolètes et les enregistre en brouillon ; une option explicite permet la publication automatique. La progression et les erreurs sont visibles dans l’administration.
+
+La navbar adopte un sélecteur `FR / EN` futuriste avec indicateur coulissant, glow cyan-violet et variante mobile. Documentation : [`V13.1-TRANSLATION-CENTER.md`](./V13.1-TRANSLATION-CENTER.md).

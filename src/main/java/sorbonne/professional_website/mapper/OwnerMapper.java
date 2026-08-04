@@ -34,7 +34,9 @@ public final class OwnerMapper {
                 activeVersion != null ? ProfileMapper.toResponse(activeVersion.getProfile()) : null,
                 activeVersion != null ? TimelineMapper.toResponse(activeVersion.getTimeline()) : null,
                 activeVersion != null ? ProjectMapper.toResponseList(activeVersion.getProjects()) : List.of(),
-                WebsiteVersionMapper.toSummaryResponseList(owner.getWebsiteVersions())
+                WebsiteVersionMapper.toSummaryResponseList(owner.getWebsiteVersions()),
+                "fr",
+                List.of()
         );
     }
 

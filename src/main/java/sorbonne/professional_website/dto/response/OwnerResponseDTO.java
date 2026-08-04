@@ -13,6 +13,8 @@ public record OwnerResponseDTO(
         ProfileResponseDTO prof,
         TimelineResponseDTO timeline,
         List<ProjectResponseDTO> projects,
-        List<WebsiteVersionSummaryResponseDTO> websiteVersions
+        List<WebsiteVersionSummaryResponseDTO> websiteVersions,
+        String locale,
+        List<ProvenSkillResponseDTO> provenSkills
 ) {
 }

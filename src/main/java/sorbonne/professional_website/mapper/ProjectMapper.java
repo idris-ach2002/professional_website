@@ -4,8 +4,10 @@ import sorbonne.professional_website.dto.request.ProjectRequestDTO;
 import sorbonne.professional_website.dto.response.ProjectResponseDTO;
 import sorbonne.professional_website.entity.Project;
 
+import java.text.Normalizer;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 
 public final class ProjectMapper {
 
@@ -35,7 +37,8 @@ public final class ProjectMapper {
                 ProjectLinkMapper.toResponseList(project.getLinks()),
                 project.getFeatured(),
                 project.getPublished(),
-                project.getDisplayOrder()
+                project.getDisplayOrder(),
+                slugify(project.getTitle())
         );
     }
 
@@ -108,6 +111,15 @@ public final class ProjectMapper {
         project.setFeatured(projectDTO.featured());
         project.setPublished(projectDTO.published());
         project.setDisplayOrder(projectDTO.displayOrder());
+    }
+
+    private static String slugify(String value) {
+        if (value == null) return "";
+        return Normalizer.normalize(value, Normalizer.Form.NFD)
+                .replaceAll("\\p{M}", "")
+                .toLowerCase(Locale.ROOT)
+                .replaceAll("[^a-z0-9]+", "-")
+                .replaceAll("^-+|-+$", "");
     }
 
     private static List<String> copyStringList(List<String> values) {
