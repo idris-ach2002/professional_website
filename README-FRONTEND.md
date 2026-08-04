@@ -17,7 +17,6 @@
 - [Intégration API](#intégration-api)
 - [Interface publique](#interface-publique)
 - [Admin panel](#admin-panel)
-- [CV Studio](#cv-studio)
 - [Animations et 3D](#animations-et-3d)
 - [Lancement local](#lancement-local)
 - [Variables d’environnement](#variables-denvironnement)
@@ -29,7 +28,7 @@
 Le frontend assure deux rôles :
 
 1. **portfolio public** : affichage du profil, des expériences, des projets, du CV et des liens de contact ;
-2. **back-office** : administration complète du contenu, des versions, des fichiers, des CV et des candidatures.
+2. **back-office** : administration du contenu, des versions, des fichiers, des analytics et des traductions.
 
 L’application est une SPA React servie par Cloudflare Workers Assets en production. Elle consomme le backend Spring Boot déployé sur Render.
 
@@ -225,34 +224,10 @@ Fonctions principales :
 - preview des fichiers ;
 - import / export JSON ;
 - health report d’une version ;
-- suivi des candidatures ;
-- analyse d’offres ;
 - génération de variantes CV et lettres ;
 - export de packs de candidature.
 
 L’admin ne contourne pas la sécurité : il appelle les routes protégées du backend avec cookies de session et CSRF.
-
-## CV Studio
-
-Le frontend contient un éditeur CV avancé intégré dans `Admin.jsx`.
-
-Fonctionnalités côté front :
-
-- document CV normalisé en JSON ;
-- sections activables / désactivables ;
-- drag & drop logique par déplacement d’items ;
-- réglages de typographie ;
-- réglages de densité, colonnes, couleurs et layout ;
-- génération locale de source LaTeX ;
-- édition manuelle de la source ;
-- rapport qualité local ;
-- analyse d’offre pour adapter le CV ;
-- variantes CV ;
-- assets photo et logos d’écoles ;
-- export ZIP reproductible via backend ;
-- compilation asynchrone via backend.
-
-Le backend reste responsable de la compilation PDF réelle, car l’image Docker contient LaTeX.
 
 ## Animations et 3D
 
@@ -494,3 +469,7 @@ L’onglet **Traductions** est désormais découpé en sous-onglets Projets, Exp
 Le bouton **Traduire tout le site** traite en une action tout le contenu métier stocké dans PostgreSQL. Par défaut, il ne retraduit que les éléments absents ou obsolètes et les enregistre en brouillon ; une option explicite permet la publication automatique. La progression et les erreurs sont visibles dans l’administration.
 
 La navbar adopte un sélecteur `FR / EN` futuriste avec indicateur coulissant, glow cyan-violet et variante mobile. Documentation : [`V13.1-TRANSLATION-CENTER.md`](./V13.1-TRANSLATION-CENTER.md).
+
+## V14 — administration recentrée
+
+Les onglets Candidatures et CV Builder ainsi que leurs services ont été retirés. L’administration web gère désormais uniquement le contenu du portfolio, les fichiers publics, les versions, les analytics, les sauvegardes et les traductions. La route publique `/cv` reste disponible pour consulter le document déjà publié.

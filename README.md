@@ -14,7 +14,7 @@
 | Document | Rôle |
 |---|---|
 | [`README.md`](./README.md) | Vue d’ensemble du portfolio, architecture globale, lancement local, déploiement et liens entre les deux projets. |
-| [`README-BACKEND.md`](./README-BACKEND.md) | Documentation détaillée du backend Spring Boot : API, sécurité, modèle de données, stockage, CV Builder, Docker, variables d’environnement. |
+| [`README-BACKEND.md`](./README-BACKEND.md) | Documentation détaillée du backend Spring Boot : API, sécurité, modèle de données, stockage, traduction, Docker et variables d’environnement. |
 | [`README-FRONTEND.md`](./README-FRONTEND.md) | Documentation détaillée du frontend React : routes, composants, intégration API, admin panel, animations, build Vite, déploiement Cloudflare. |
 
 ## Vue d’ensemble
@@ -22,9 +22,9 @@
 Ce portfolio est une application full stack structurée en deux projets indépendants :
 
 - un **frontend React** qui affiche le portfolio public, le CV et une interface d’administration ;
-- un **backend Spring Boot** qui expose les API publiques et protégées, persiste les données dans PostgreSQL, gère les fichiers, les versions du site, la génération de CV LaTeX et le suivi des candidatures.
+- un **backend Spring Boot** qui expose les API publiques et protégées, persiste les données dans PostgreSQL, gère les fichiers, les versions du site et les traductions persistées.
 
-Le site n’est pas un portfolio statique. Il repose sur une donnée métier administrable : propriétaire du portfolio, profil, expériences, projets, versions de site, documents, CV et candidatures. Le frontend consomme l’API publique pour afficher la version publiée et consomme l’API protégée pour l’administration.
+Le site n’est pas un portfolio statique. Il repose sur une donnée métier administrable : propriétaire du portfolio, profil, expériences, projets, versions de site, documents et traductions. Le frontend consomme l’API publique pour afficher la version publiée et consomme l’API protégée pour l’administration.
 
 ## Liens de production
 
@@ -52,7 +52,7 @@ Render
 Backend Spring Boot / Docker
    │
    ├── Aiven PostgreSQL
-   │      └── données relationnelles : owners, versions, profils, timelines, projets, candidatures
+   │      └── données relationnelles : owners, versions, profils, timelines, projets, analytics et traductions
    │
    ├── Cloudinary
    │      └── fichiers publics ou administrés : images, PDF, CV, exports ZIP
@@ -87,7 +87,6 @@ Backend Spring Boot / Docker
 - Actuator health ;
 - Cloudinary SDK ;
 - Docker multi-stage ;
-- LaTeX / latexmk / TeX Live dans l’image Docker pour la génération PDF.
 
 ## Fonctionnalités principales
 
@@ -97,8 +96,6 @@ Backend Spring Boot / Docker
 | Administration | Création et modification d’un owner, profil, timeline, expériences, projets et contacts. |
 | Versioning | Gestion de plusieurs versions du portfolio, duplication d’une version, activation d’une version unique, validation avant publication. |
 | Fichiers | Upload protégé, stockage local en développement ou Cloudinary en production, preview d’images et de PDF. |
-| CV Builder | Construction d’un CV LaTeX, preview PDF, sauvegarde, export ZIP, contrôle qualité et compilation asynchrone avec SSE. |
-| Candidatures | Suivi des candidatures, statuts, analyse d’offre, génération de lettres, variantes CV et smart pack. |
 | Sécurité | API manager protégée, rôle `ADMIN`, CSRF sur les méthodes mutantes, CORS restrictif, redirections frontend contrôlées. |
 | Déploiement | Front Cloudflare, back Render Docker, base Aiven, fichiers Cloudinary, health ping cron-job.org. |
 
@@ -211,7 +208,6 @@ npm run cf:deploy
 Le backend est construit depuis le `Dockerfile`. L’image :
 
 1. compile l’application Maven avec Java 21 ;
-2. installe les dépendances LaTeX nécessaires à la génération de CV ;
 3. expose le port applicatif Spring Boot ;
 4. lance `app.jar`.
 
@@ -311,3 +307,15 @@ POST /api/translations/{contentType}/{contentKey}/auto?locale=en
 Cet endpoint protégé charge tous les champs français de l’entité, appelle LibreTranslate, puis persiste le résultat dans `content_translation` avec le statut `DRAFT` ou `PUBLISHED`. L’administration orchestre séquentiellement cet endpoint pour proposer **Traduire tout le site** avec progression et rapport d’échec.
 
 Le traitement global couvre le profil, la timeline, les expériences, les projets et les compétences prouvées. L’API publique continue d’utiliser le français comme fallback si une traduction est absente, incomplète ou obsolète. Documentation : [`V13.1-TRANSLATION-CENTER.md`](./V13.1-TRANSLATION-CENTER.md).
+
+## V14 — retrait des modules candidatures et CV LaTeX
+
+Les fonctions de lecture/analyse d’offres, de suivi de candidatures et de génération de CV LaTeX ont été retirées du déploiement. Elles sont désormais portées par un projet local séparé. Le backend de production reste concentré sur le portfolio, l’administration du contenu, les fichiers, les analytics et les traductions.
+
+Conséquences :
+
+- suppression des packages Java `applications/` et `cv/` ;
+- suppression de TeX Live et `latexmk` de l’image Docker ;
+- suppression des variables `CV_LATEX_*` ;
+- migration Flyway `V5` supprimant la table `job_application` ;
+- conservation du champ `profile.cvUrl` pour afficher ou télécharger un CV déjà publié.

@@ -1,6 +1,6 @@
 # Backend — Portfolio professionnel Spring Boot
 
-> API backend du portfolio professionnel : gestion du contenu public, administration sécurisée, versioning de site, uploads, génération de CV LaTeX et suivi des candidatures.
+> API backend du portfolio professionnel : gestion du contenu public, administration sécurisée, versioning, uploads, analytics et traductions persistées.
 
 [![Java](https://img.shields.io/badge/Java-21-b07219)](#stack)
 [![Spring Boot](https://img.shields.io/badge/Spring%20Boot-4.0.6-6db33f)](#stack)
@@ -16,8 +16,6 @@
 - [API principales](#api-principales)
 - [Sécurité](#sécurité)
 - [Stockage fichiers](#stockage-fichiers)
-- [CV Builder LaTeX](#cv-builder-latex)
-- [Module candidatures](#module-candidatures)
 - [Lancement local Docker](#lancement-local-docker)
 - [Variables d’environnement](#variables-denvironnement)
 - [Déploiement Render](#déploiement-render)
@@ -32,8 +30,6 @@ Le backend centralise la logique métier du portfolio. Il fournit :
 - un modèle relationnel PostgreSQL ;
 - un système de versions du portfolio ;
 - la gestion des fichiers en local ou via Cloudinary ;
-- la génération de CV PDF à partir de LaTeX ;
-- un module de suivi et d’optimisation de candidatures ;
 - une route de santé légère utilisée en production par Render et cron-job.org.
 
 ## Stack
@@ -52,7 +48,6 @@ Le backend centralise la logique métier du portfolio. Il fournit :
 | Monitoring minimal | Spring Boot Actuator, endpoint `/actuator/health` |
 | Stockage | Local filesystem ou Cloudinary |
 | Packaging | Maven Wrapper, Docker multi-stage |
-| Génération PDF | LaTeX, latexmk, TeX Live dans l’image Docker |
 
 ## Architecture applicative
 
@@ -68,8 +63,6 @@ src/main/java/sorbonne/professional_website/
 ├── mapper/              # conversion DTO ↔ entités
 ├── security/            # Spring Security, login, CSRF, redirections front
 ├── upload/              # stockage local / Cloudinary
-├── cv/                  # génération CV LaTeX, compilation, exports
-├── applications/        # suivi de candidatures, analyse d’offres, smart pack
 ├── config/              # configuration Jackson
 └── exception/           # gestion d’erreurs REST
 ```
@@ -81,7 +74,7 @@ Controller → Service → Repository → Entity
         DTO ↔ Mapper ↔ Entity
 ```
 
-Les services sont transactionnels et portent les règles métier : activation d’une version unique, duplication de version, validation avant publication, génération de fichiers, export ZIP et mise à jour cohérente des agrégats.
+Les services sont transactionnels et portent les règles métier : activation d’une version unique, duplication de version, validation avant publication, gestion des fichiers, backups et mise à jour cohérente des agrégats.
 
 ## Modèle de données
 
@@ -188,42 +181,6 @@ WHERE active = true;
 | `PUT` | `/manager/{ownerId}/versions/{versionId}/projects/{projectId}` | Met à jour un projet. |
 | `DELETE` | `/manager/{ownerId}/versions/{versionId}/projects/{projectId}` | Supprime un projet. |
 
-### API CV Builder
-
-| Méthode | Route | Description |
-|---|---|---|
-| `GET` | `/manager/{ownerId}/versions/{versionId}/cv/source` | Génère la source LaTeX par défaut. |
-| `POST` | `/manager/{ownerId}/versions/{versionId}/cv/source` | Génère une source LaTeX à partir d’une requête. |
-| `POST` | `/manager/{ownerId}/versions/{versionId}/cv/preview` | Compile et retourne une preview PDF. |
-| `POST` | `/manager/{ownerId}/versions/{versionId}/cv/save` | Compile et sauvegarde le CV. |
-| `POST` | `/manager/{ownerId}/versions/{versionId}/cv/export-zip` | Exporte un ZIP reproductible. |
-| `POST` | `/manager/{ownerId}/versions/{versionId}/cv/quality` | Retourne un rapport qualité. |
-| `POST` | `/manager/{ownerId}/versions/{versionId}/cv/compile-jobs` | Lance une compilation asynchrone. |
-| `GET` | `/manager/{ownerId}/versions/{versionId}/cv/compile-jobs/{jobId}` | Lit l’état d’un job. |
-| `GET` | `/manager/{ownerId}/versions/{versionId}/cv/compile-jobs/{jobId}/events` | Stream SSE d’un job de compilation. |
-| `GET` | `/manager/{ownerId}/versions/{versionId}/cv/version` | Lit la version liée au CV. |
-
-### API candidatures
-
-| Méthode | Route | Description |
-|---|---|---|
-| `GET` | `/manager/{ownerId}/applications` | Liste les candidatures, avec filtre optionnel par statut. |
-| `GET` | `/manager/{ownerId}/applications/dashboard` | Retourne les indicateurs de suivi. |
-| `GET` | `/manager/{ownerId}/applications/{applicationId}` | Lit une candidature. |
-| `POST` | `/manager/{ownerId}/applications` | Crée une candidature. |
-| `PUT` | `/manager/{ownerId}/applications/{applicationId}` | Met à jour une candidature. |
-| `DELETE` | `/manager/{ownerId}/applications/{applicationId}` | Supprime une candidature. |
-| `POST` | `/manager/{ownerId}/applications/{applicationId}/status/{status}` | Change le statut. |
-| `POST` | `/manager/{ownerId}/applications/analyze-offer` | Analyse une offre. |
-| `POST` | `/manager/{ownerId}/applications/{applicationId}/cover-letter/preview` | Prévisualise une lettre. |
-| `POST` | `/manager/{ownerId}/applications/{applicationId}/cover-letter/save` | Sauvegarde une lettre. |
-| `POST` | `/manager/{ownerId}/applications/{applicationId}/export-zip` | Exporte un dossier de candidature. |
-| `GET` | `/manager/{ownerId}/applications/letter-templates` | Liste les modèles de lettres. |
-| `POST` | `/manager/{ownerId}/applications/{applicationId}/analyze-smart` | Analyse intelligente. |
-| `POST` | `/manager/{ownerId}/applications/{applicationId}/generate-cv-variants` | Propose des variantes CV. |
-| `POST` | `/manager/{ownerId}/applications/{applicationId}/generate-letter-variants` | Propose des variantes de lettre. |
-| `POST` | `/manager/{ownerId}/applications/{applicationId}/smart-pack` | Exporte un smart pack. |
-
 ## Sécurité
 
 Le backend utilise Spring Security avec une stratégie fermée par défaut.
@@ -315,59 +272,6 @@ CLOUDINARY_FOLDER=portfolio
 ```
 
 Le contrôleur d’upload retourne au frontend un objet contenant le nom de fichier et l’URL exploitable.
-
-## CV Builder LaTeX
-
-Le backend contient un module `cv/` dédié à la génération de CV.
-
-Fonctionnalités :
-
-- génération de source LaTeX à partir d’une version du portfolio ;
-- override manuel de la source ;
-- compilation PDF ;
-- sauvegarde du PDF généré ;
-- export ZIP reproductible ;
-- rapport qualité ;
-- compilation asynchrone ;
-- streaming d’événements via SSE ;
-- cache de compilation pour éviter de recompiler inutilement une source identique.
-
-Le `Dockerfile` installe les paquets nécessaires :
-
-```txt
-latexmk
-texlive-latex-base
-texlive-latex-recommended
-texlive-latex-extra
-texlive-fonts-recommended
-texlive-fonts-extra
-texlive-pictures
-texlive-lang-french
-```
-
-Le compilateur par défaut est :
-
-```txt
-CV_LATEX_COMPILER=latexmk
-```
-
-Les autres valeurs prévues par le service sont `pdflatex` et `tectonic`, si les binaires correspondants sont disponibles dans l’image.
-
-## Module candidatures
-
-Le module `applications/` ajoute un mini outil de suivi de candidatures.
-
-Il gère :
-
-- les statuts : `DRAFT`, `TO_SEND`, `SENT`, `FOLLOW_UP`, `INTERVIEW`, `REJECTED`, `ACCEPTED`, `ARCHIVED` ;
-- le texte d’offre ;
-- l’entreprise et le poste ;
-- les URLs d’offre, CV, lettre et ZIP ;
-- un score de pertinence ;
-- les mots-clés présents et manquants ;
-- les recommandations ;
-- des variantes de CV et de lettres ;
-- un export de dossier de candidature.
 
 ## Lancement local Docker
 
@@ -476,14 +380,6 @@ CLOUDINARY_API_SECRET=...
 CLOUDINARY_FOLDER=portfolio
 ```
 
-### CV Builder
-
-```txt
-CV_LATEX_COMPILER=latexmk
-CV_LATEX_TIMEOUT_SECONDS=45
-CV_STORE_LATEX_SOURCE=true
-```
-
 ## Déploiement Render
 
 > Migration depuis Neon : consulter [`MIGRATION-AIVEN.md`](MIGRATION-AIVEN.md).
@@ -498,7 +394,6 @@ Le Dockerfile réalise :
 
 1. build Maven avec `maven:3.9-eclipse-temurin-21` ;
 2. runtime avec `eclipse-temurin:21-jre` ;
-3. installation des dépendances LaTeX ;
 4. copie de l’artefact `app.jar` ;
 5. démarrage avec `java $JAVA_OPTS -jar app.jar`.
 
@@ -524,9 +419,6 @@ CLOUDINARY_API_KEY=<api-key>
 CLOUDINARY_API_SECRET=<api-secret>
 CLOUDINARY_FOLDER=portfolio
 
-CV_LATEX_COMPILER=latexmk
-CV_LATEX_TIMEOUT_SECONDS=45
-CV_STORE_LATEX_SOURCE=true
 ```
 
 ### Health ping
@@ -625,3 +517,7 @@ POST /api/translations/{contentType}/{contentKey}/auto?locale=en
 Cet endpoint protégé charge tous les champs français de l’entité, appelle LibreTranslate, puis persiste le résultat dans `content_translation` avec le statut `DRAFT` ou `PUBLISHED`. L’administration orchestre séquentiellement cet endpoint pour proposer **Traduire tout le site** avec progression et rapport d’échec.
 
 Le traitement global couvre le profil, la timeline, les expériences, les projets et les compétences prouvées. L’API publique continue d’utiliser le français comme fallback si une traduction est absente, incomplète ou obsolète. Documentation : [`V13.1-TRANSLATION-CENTER.md`](./V13.1-TRANSLATION-CENTER.md).
+
+## V14 — backend de production allégé
+
+Le suivi de candidatures, l’analyse d’offres et la génération de CV LaTeX ont été déplacés vers un outil local indépendant. Le déploiement Render n’installe plus TeX Live et n’expose plus les routes `/applications` ou `/cv/*`. Le téléchargement public d’un CV existant reste possible via `profile.cvUrl`. La migration `V5__drop_job_application_module.sql` supprime les données du tracker devenues inutiles.
