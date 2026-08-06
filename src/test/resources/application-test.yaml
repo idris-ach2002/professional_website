@@ -1,0 +1,55 @@
+# Profil réservé aux tests automatisés.
+# PostgreSQL est lancé dans un conteneur Docker jetable par Testcontainers.
+server:
+  servlet:
+    session:
+      cookie:
+        same-site: lax
+        secure: false
+
+spring:
+  datasource:
+    url: jdbc:tc:postgresql:16-alpine:///professional_website_test?TC_DAEMON=true
+    username: test
+    password: test
+    driver-class-name: org.testcontainers.jdbc.ContainerDatabaseDriver
+    hikari:
+      pool-name: PortfolioTestHikariPool
+      maximum-pool-size: 3
+      minimum-idle: 1
+
+  jpa:
+    open-in-view: false
+    show-sql: false
+    hibernate:
+      ddl-auto: create-drop
+
+  # Les migrations disposent d'un test dédié sur une seconde base PostgreSQL
+  # afin de ne pas entrer en conflit avec la génération du schéma JPA.
+  flyway:
+    enabled: false
+
+portfolio:
+  security:
+    admin:
+      username: test-admin
+      password: test-password-123
+
+storage:
+  provider: local
+  location: ${java.io.tmpdir}/professional-website-tests/uploads
+
+app:
+  cors:
+    allowed-origins: http://localhost:5173
+  analytics:
+    hash-secret: test-analytics-secret
+  frontend:
+    origin: http://localhost:5173
+    allowed-origins: http://localhost:5173
+
+translation:
+  libretranslate:
+    enabled: false
+    base-url: http://127.0.0.1:5000
+    timeout: 2s

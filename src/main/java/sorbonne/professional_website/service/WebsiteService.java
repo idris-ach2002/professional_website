@@ -1,6 +1,5 @@
 package sorbonne.professional_website.service;
 
-import jakarta.persistence.EntityNotFoundException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import sorbonne.professional_website.dto.response.OwnerResponseDTO;
@@ -44,13 +43,13 @@ public class WebsiteService {
 
     public OwnerResponseDTO getFirstOwner(String locale) {
         Owner owner = rpOwner.findFirstByOrderByOwnerIdAsc()
-                .orElseThrow(() -> new EntityNotFoundException("No owner found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Owner"));
         return localizationService.localize(owner, locale);
     }
 
     public ProjectResponseDTO getDefaultProjectBySlug(String slug, String locale) {
         Owner owner = rpOwner.findFirstByOrderByOwnerIdAsc()
-                .orElseThrow(() -> new EntityNotFoundException("No owner found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Owner"));
         return localizeProject(findProject(owner, slug), locale);
     }
 
