@@ -4,6 +4,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import sorbonne.professional_website.dto.response.OwnerResponseDTO;
 import sorbonne.professional_website.dto.response.ProjectResponseDTO;
+import sorbonne.professional_website.dto.response.PublicWebsiteSnapshotResponseDTO;
 import sorbonne.professional_website.service.WebsiteService;
 
 import java.util.List;
@@ -30,6 +31,11 @@ public class WebsiteController {
             @RequestParam(defaultValue = "fr") String locale
     ) {
         return ResponseEntity.ok(srvWebsite.getFirstOwner(locale));
+    }
+
+    @GetMapping("/default/seo-snapshot")
+    public ResponseEntity<PublicWebsiteSnapshotResponseDTO> getDefaultSeoSnapshot() {
+        return ResponseEntity.ok(srvWebsite.getPublicSeoSnapshot());
     }
 
     @GetMapping("/{ownerId}")

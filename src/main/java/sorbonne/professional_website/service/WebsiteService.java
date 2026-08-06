@@ -4,6 +4,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import sorbonne.professional_website.dto.response.OwnerResponseDTO;
 import sorbonne.professional_website.dto.response.ProjectResponseDTO;
+import sorbonne.professional_website.dto.response.PublicWebsiteSnapshotResponseDTO;
 import sorbonne.professional_website.entity.Owner;
 import sorbonne.professional_website.entity.Project;
 import sorbonne.professional_website.exception.ResourceNotFoundException;
@@ -12,6 +13,7 @@ import sorbonne.professional_website.repository.OwnerRepository;
 import sorbonne.professional_website.translation.service.PortfolioLocalizationService;
 
 import java.text.Normalizer;
+import java.time.Instant;
 import java.util.List;
 import java.util.Locale;
 
@@ -45,6 +47,16 @@ public class WebsiteService {
         Owner owner = rpOwner.findFirstByOrderByOwnerIdAsc()
                 .orElseThrow(() -> new ResourceNotFoundException("Owner"));
         return localizationService.localize(owner, locale);
+    }
+
+    public PublicWebsiteSnapshotResponseDTO getPublicSeoSnapshot() {
+        Owner owner = rpOwner.findFirstByOrderByOwnerIdAsc()
+                .orElseThrow(() -> new ResourceNotFoundException("Owner"));
+        return new PublicWebsiteSnapshotResponseDTO(
+                Instant.now().toString(),
+                localizationService.localize(owner, "fr"),
+                localizationService.localize(owner, "en")
+        );
     }
 
     public ProjectResponseDTO getDefaultProjectBySlug(String slug, String locale) {

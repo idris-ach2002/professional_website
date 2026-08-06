@@ -4,6 +4,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.test.web.servlet.MockMvc;
 import sorbonne.professional_website.dto.response.OwnerResponseDTO;
+import sorbonne.professional_website.dto.response.PublicWebsiteSnapshotResponseDTO;
 import sorbonne.professional_website.exception.GlobalExceptionHandler;
 import sorbonne.professional_website.exception.ResourceNotFoundException;
 import sorbonne.professional_website.service.WebsiteService;
@@ -14,7 +15,6 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.springframework.test.web.servlet.setup.MockMvcBuilders.standaloneSetup;
@@ -72,4 +72,30 @@ class WebsiteControllerTest {
                 .andExpect(jsonPath("$.path").value("/website/999"))
                 .andExpect(jsonPath("$.requestId").value("unavailable"));
     }
+
+    @Test
+    void seoSnapshotExposesFrenchAndEnglishPublicContent() throws Exception {
+        var snapshot = new PublicWebsiteSnapshotResponseDTO(
+                "2026-08-07T00:00:00Z",
+                owner("fr"),
+                owner("en")
+        );
+        when(websiteService.getPublicSeoSnapshot()).thenReturn(snapshot);
+
+        mockMvc.perform(get("/website/default/seo-snapshot"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.generatedAt").exists())
+                .andExpect(jsonPath("$.fr.locale").value("fr"))
+                .andExpect(jsonPath("$.en.locale").value("en"));
+
+        verify(websiteService).getPublicSeoSnapshot();
+    }
+
+    private static OwnerResponseDTO owner(String locale) {
+        return new OwnerResponseDTO(
+                1L, "ACHABOU", "Idris", 24, true, "Paris",
+                List.of(), null, null, List.of(), List.of(), locale, List.of()
+        );
+    }
+
 }
