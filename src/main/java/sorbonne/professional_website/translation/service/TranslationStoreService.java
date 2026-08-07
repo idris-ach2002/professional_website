@@ -178,6 +178,88 @@ public class TranslationStoreService {
         );
     }
 
+    /**
+     * Loads every published translation for one locale in a single repository query.
+     * Public portfolio rendering reuses this immutable index instead of issuing one
+     * SQL query per profile, timeline, experience, project and proven skill.
+     */
+    @Transactional(readOnly = true)
+    public PublishedTranslations publishedTranslations(String locale) {
+        String normalizedLocale = localeNormalizer.normalize(locale);
+        if (localeNormalizer.isDefault(normalizedLocale)) {
+            return PublishedTranslations.empty(normalizedLocale);
+        }
+
+        Map<TranslationKey, Map<String, PublishedField>> byContent = new LinkedHashMap<>();
+        for (ContentTranslation translation : repository.findByLocaleAndStatus(
+                normalizedLocale,
+                TranslationStatus.PUBLISHED
+        )) {
+            TranslationKey key = new TranslationKey(
+                    translation.getContentType(),
+                    translation.getContentKey()
+            );
+            byContent.computeIfAbsent(key, ignored -> new LinkedHashMap<>())
+                    .put(translation.getFieldName(), new PublishedField(
+                            translation.getTranslatedText(),
+                            translation.getSourceHash()
+                    ));
+        }
+
+        Map<TranslationKey, Map<String, PublishedField>> immutable = byContent.entrySet().stream()
+                .collect(Collectors.toUnmodifiableMap(
+                        Map.Entry::getKey,
+                        entry -> Map.copyOf(entry.getValue())
+                ));
+        return new PublishedTranslations(normalizedLocale, immutable);
+    }
+
+    public Map<String, String> publishedFields(
+            PublishedTranslations publishedTranslations,
+            TranslationContentType type,
+            String key,
+            Map<String, String> sourceFields
+    ) {
+        if (publishedTranslations == null
+                || localeNormalizer.isDefault(publishedTranslations.locale())
+                || sourceFields == null
+                || sourceFields.isEmpty()) {
+            return Map.of();
+        }
+
+        Map<String, PublishedField> translated = publishedTranslations.byContent()
+                .get(new TranslationKey(type, key));
+        if (translated == null || translated.isEmpty()) return Map.of();
+
+        Map<String, String> result = new LinkedHashMap<>();
+        for (Map.Entry<String, String> sourceEntry : sourceFields.entrySet()) {
+            PublishedField field = translated.get(sourceEntry.getKey());
+            if (field == null
+                    || field.text() == null
+                    || field.text().isBlank()
+                    || !Objects.equals(field.sourceHash(), hashService.hash(sourceEntry.getValue()))) {
+                return Map.of();
+            }
+            result.put(sourceEntry.getKey(), field.text());
+        }
+        return result;
+    }
+
+    public record PublishedTranslations(
+            String locale,
+            Map<TranslationKey, Map<String, PublishedField>> byContent
+    ) {
+        static PublishedTranslations empty(String locale) {
+            return new PublishedTranslations(locale, Map.of());
+        }
+    }
+
+    public record TranslationKey(TranslationContentType type, String key) {
+    }
+
+    public record PublishedField(String text, String sourceHash) {
+    }
+
     @Transactional(readOnly = true)
     public Map<String, String> publishedFields(TranslationContentType type, String key, String locale) {
         String normalizedLocale = localeNormalizer.normalize(locale);

@@ -13,6 +13,8 @@ import java.util.List;
 import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.anyMap;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -32,7 +34,9 @@ class PortfolioLocalizationServiceTest {
 
     @Test
     void keepsFrenchSourceWhenPublishedTranslationIsUnavailable() {
-        when(translations.publishedFields(TranslationContentType.PROJECT, "42", "en"))
+        var published = new TranslationStoreService.PublishedTranslations("en", Map.of());
+        when(translations.publishedTranslations("en")).thenReturn(published);
+        when(translations.publishedFields(eq(published), eq(TranslationContentType.PROJECT), eq("42"), anyMap()))
                 .thenReturn(Map.of());
 
         ProjectResponseDTO localized = service.localizeProject(sourceProject(), "en");
@@ -44,7 +48,9 @@ class PortfolioLocalizationServiceTest {
 
     @Test
     void appliesPublishedEnglishFieldsAndPreservesTechnicalFields() {
-        when(translations.publishedFields(TranslationContentType.PROJECT, "42", "en"))
+        var published = new TranslationStoreService.PublishedTranslations("en", Map.of());
+        when(translations.publishedTranslations("en")).thenReturn(published);
+        when(translations.publishedFields(eq(published), eq(TranslationContentType.PROJECT), eq("42"), anyMap()))
                 .thenReturn(Map.of(
                         "title", "English project",
                         "description", "English description",

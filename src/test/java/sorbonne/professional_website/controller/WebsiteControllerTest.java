@@ -3,6 +3,8 @@ package sorbonne.professional_website.controller;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.MvcResult;
+import org.springframework.web.filter.ShallowEtagHeaderFilter;
 import sorbonne.professional_website.dto.response.OwnerResponseDTO;
 import sorbonne.professional_website.dto.response.PublicWebsiteSnapshotResponseDTO;
 import sorbonne.professional_website.exception.GlobalExceptionHandler;
@@ -14,7 +16,10 @@ import java.util.List;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.springframework.http.HttpHeaders.ETAG;
+import static org.springframework.http.HttpHeaders.IF_NONE_MATCH;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.springframework.test.web.servlet.setup.MockMvcBuilders.standaloneSetup;
@@ -28,6 +33,7 @@ class WebsiteControllerTest {
     void setUp() {
         websiteService = mock(WebsiteService.class);
         mockMvc = standaloneSetup(new WebsiteController(websiteService))
+                .addFilters(new ShallowEtagHeaderFilter())
                 .setControllerAdvice(new GlobalExceptionHandler())
                 .build();
     }
@@ -53,10 +59,26 @@ class WebsiteControllerTest {
 
         mockMvc.perform(get("/website/default").param("locale", "en"))
                 .andExpect(status().isOk())
+                .andExpect(header().string("Cache-Control", "max-age=60, public"))
                 .andExpect(jsonPath("$.ownerId").value(1))
                 .andExpect(jsonPath("$.locale").value("en"));
 
         verify(websiteService).getFirstOwner("en");
+    }
+
+    @Test
+    void defaultWebsiteSupportsConditionalRequestsWithEtag() throws Exception {
+        OwnerResponseDTO response = owner("fr");
+        when(websiteService.getFirstOwner("fr")).thenReturn(response);
+
+        MvcResult first = mockMvc.perform(get("/website/default"))
+                .andExpect(status().isOk())
+                .andExpect(header().exists(ETAG))
+                .andReturn();
+
+        String etag = first.getResponse().getHeader(ETAG);
+        mockMvc.perform(get("/website/default").header(IF_NONE_MATCH, etag))
+                .andExpect(status().isNotModified());
     }
 
     @Test

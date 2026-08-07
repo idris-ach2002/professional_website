@@ -23,6 +23,12 @@ public interface ContentTranslationRepository extends JpaRepository<ContentTrans
             TranslationStatus status
     );
 
+
+    List<ContentTranslation> findByLocaleAndStatus(
+            String locale,
+            TranslationStatus status
+    );
+
     Optional<ContentTranslation> findByContentTypeAndContentKeyAndLocaleAndFieldName(
             TranslationContentType contentType,
             String contentKey,

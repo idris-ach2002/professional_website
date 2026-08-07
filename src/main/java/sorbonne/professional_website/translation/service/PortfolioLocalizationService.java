@@ -7,6 +7,7 @@ import sorbonne.professional_website.mapper.OwnerMapper;
 import sorbonne.professional_website.translation.entity.TranslationContentType;
 
 import java.util.Arrays;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -31,10 +32,11 @@ public class PortfolioLocalizationService {
         OwnerResponseDTO source = OwnerMapper.toResponse(owner);
         String locale = localeNormalizer.normalize(requestedLocale);
 
-        ProfileResponseDTO profile = localizeProfile(source.prof(), locale);
-        TimelineResponseDTO timeline = localizeTimeline(source.timeline(), locale);
+        TranslationStoreService.PublishedTranslations publishedTranslations = translations.publishedTranslations(locale);
+        ProfileResponseDTO profile = localizeProfile(source.prof(), publishedTranslations);
+        TimelineResponseDTO timeline = localizeTimeline(source.timeline(), publishedTranslations);
         List<ProjectResponseDTO> projects = source.projects().stream()
-                .map(project -> localizeProject(project, locale))
+                .map(project -> localizeProject(project, publishedTranslations))
                 .toList();
 
         List<ExperienceResponseDTO> sourceExperiences = source.timeline() == null
@@ -48,7 +50,8 @@ public class PortfolioLocalizationService {
                 sourceExperiences,
                 projects,
                 localizedExperiences,
-                locale
+                locale,
+                publishedTranslations
         );
 
         return new OwnerResponseDTO(
@@ -71,10 +74,18 @@ public class PortfolioLocalizationService {
     public ProjectResponseDTO localizeProject(ProjectResponseDTO project, String requestedLocale) {
         if (project == null) return null;
         String locale = localeNormalizer.normalize(requestedLocale);
+        return localizeProject(project, translations.publishedTranslations(locale));
+    }
+
+    private ProjectResponseDTO localizeProject(
+            ProjectResponseDTO project,
+            TranslationStoreService.PublishedTranslations publishedTranslations
+    ) {
         Map<String, String> fields = translations.publishedFields(
+                publishedTranslations,
                 TranslationContentType.PROJECT,
                 String.valueOf(project.id()),
-                locale
+                projectSourceFields(project)
         );
         return new ProjectResponseDTO(
                 project.id(),
@@ -99,12 +110,16 @@ public class PortfolioLocalizationService {
         );
     }
 
-    private ProfileResponseDTO localizeProfile(ProfileResponseDTO profile, String locale) {
+    private ProfileResponseDTO localizeProfile(
+            ProfileResponseDTO profile,
+            TranslationStoreService.PublishedTranslations publishedTranslations
+    ) {
         if (profile == null) return null;
         Map<String, String> fields = translations.publishedFields(
+                publishedTranslations,
                 TranslationContentType.PROFILE,
                 String.valueOf(profile.id()),
-                locale
+                profileSourceFields(profile)
         );
         return new ProfileResponseDTO(
                 profile.id(),
@@ -124,26 +139,36 @@ public class PortfolioLocalizationService {
         );
     }
 
-    private TimelineResponseDTO localizeTimeline(TimelineResponseDTO timeline, String locale) {
+    private TimelineResponseDTO localizeTimeline(
+            TimelineResponseDTO timeline,
+            TranslationStoreService.PublishedTranslations publishedTranslations
+    ) {
         if (timeline == null) return null;
         Map<String, String> fields = translations.publishedFields(
+                publishedTranslations,
                 TranslationContentType.TIMELINE,
                 String.valueOf(timeline.id()),
-                locale
+                timelineSourceFields(timeline)
         );
         return new TimelineResponseDTO(
                 timeline.id(),
                 fields.getOrDefault("title", timeline.title()),
                 fields.getOrDefault("description", timeline.description()),
-                timeline.experiences().stream().map(experience -> localizeExperience(experience, locale)).toList()
+                timeline.experiences().stream()
+                        .map(experience -> localizeExperience(experience, publishedTranslations))
+                        .toList()
         );
     }
 
-    private ExperienceResponseDTO localizeExperience(ExperienceResponseDTO experience, String locale) {
+    private ExperienceResponseDTO localizeExperience(
+            ExperienceResponseDTO experience,
+            TranslationStoreService.PublishedTranslations publishedTranslations
+    ) {
         Map<String, String> fields = translations.publishedFields(
+                publishedTranslations,
                 TranslationContentType.EXPERIENCE,
                 String.valueOf(experience.id()),
-                locale
+                experienceSourceFields(experience)
         );
         return new ExperienceResponseDTO(
                 experience.id(),
@@ -161,6 +186,50 @@ public class PortfolioLocalizationService {
                 experience.skills(),
                 experience.displayOrder()
         );
+    }
+
+    private static Map<String, String> profileSourceFields(ProfileResponseDTO profile) {
+        Map<String, String> fields = new LinkedHashMap<>();
+        put(fields, "title", profile.title());
+        put(fields, "subtitle", profile.subtitle());
+        put(fields, "headline", profile.headline());
+        put(fields, "shortDescription", profile.shortDescription());
+        put(fields, "description", profile.description());
+        put(fields, "location", profile.location());
+        put(fields, "availability", profile.availability());
+        return fields;
+    }
+
+    private static Map<String, String> timelineSourceFields(TimelineResponseDTO timeline) {
+        Map<String, String> fields = new LinkedHashMap<>();
+        put(fields, "title", timeline.title());
+        put(fields, "description", timeline.description());
+        return fields;
+    }
+
+    private static Map<String, String> experienceSourceFields(ExperienceResponseDTO experience) {
+        Map<String, String> fields = new LinkedHashMap<>();
+        put(fields, "title", experience.title());
+        put(fields, "location", experience.location());
+        put(fields, "summary", experience.summary());
+        put(fields, "description", experience.description());
+        return fields;
+    }
+
+    private static Map<String, String> projectSourceFields(ProjectResponseDTO project) {
+        Map<String, String> fields = new LinkedHashMap<>();
+        put(fields, "title", project.title());
+        put(fields, "subtitle", project.subtitle());
+        put(fields, "shortDescription", project.shortDescription());
+        put(fields, "description", project.description());
+        if (project.features() != null && !project.features().isEmpty()) {
+            put(fields, "features", joinLines(project.features()));
+        }
+        return fields;
+    }
+
+    private static void put(Map<String, String> fields, String key, String value) {
+        if (value != null && !value.isBlank()) fields.put(key, value);
     }
 
     private static String joinLines(List<String> values) {

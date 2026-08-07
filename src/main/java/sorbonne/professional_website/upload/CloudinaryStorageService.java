@@ -19,6 +19,7 @@ import java.util.Map;
 @ConditionalOnProperty(name = "storage.provider", havingValue = "cloudinary")
 public class CloudinaryStorageService implements StorageService {
 
+    private static final String RESOURCE_TYPE_AUTO = "auto";
     private static final String RESOURCE_TYPE_RAW = "raw";
 
     private final Cloudinary cloudinary;
@@ -47,7 +48,7 @@ public class CloudinaryStorageService implements StorageService {
 
         try {
             Map<?, ?> uploadResult = cloudinary.uploader().upload(file.getBytes(), ObjectUtils.asMap(
-                    "resource_type", RESOURCE_TYPE_RAW,
+                    "resource_type", RESOURCE_TYPE_AUTO,
                     "public_id", publicId,
                     "overwrite", false,
                     "use_filename", false,
@@ -73,7 +74,7 @@ public class CloudinaryStorageService implements StorageService {
 
         try {
             Map<?, ?> uploadResult = cloudinary.uploader().upload(content, ObjectUtils.asMap(
-                    "resource_type", RESOURCE_TYPE_RAW,
+                    "resource_type", RESOURCE_TYPE_AUTO,
                     "public_id", publicId,
                     "overwrite", false,
                     "use_filename", false,

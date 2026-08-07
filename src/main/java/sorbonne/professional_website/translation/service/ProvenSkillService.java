@@ -27,7 +27,8 @@ public class ProvenSkillService {
             List<ExperienceResponseDTO> sourceExperiences,
             List<ProjectResponseDTO> localizedProjects,
             List<ExperienceResponseDTO> localizedExperiences,
-            String locale
+            String locale,
+            TranslationStoreService.PublishedTranslations publishedTranslations
     ) {
         Map<Long, ProjectResponseDTO> localizedProjectById = localizedProjects.stream()
                 .filter(item -> item.id() != null)
@@ -43,7 +44,8 @@ public class ProvenSkillService {
                         sourceExperiences,
                         localizedProjectById,
                         localizedExperienceById,
-                        locale
+                        locale,
+                        publishedTranslations
                 ))
                 .filter(skill -> skill.evidenceCount() != null && skill.evidenceCount() > 0)
                 .sorted(Comparator
@@ -59,7 +61,8 @@ public class ProvenSkillService {
             List<ExperienceResponseDTO> sourceExperiences,
             Map<Long, ProjectResponseDTO> localizedProjectById,
             Map<Long, ExperienceResponseDTO> localizedExperienceById,
-            String locale
+            String locale,
+            TranslationStoreService.PublishedTranslations publishedTranslations
     ) {
         List<ScoredProject> projects = sourceProjects.stream()
                 .filter(project -> !Boolean.FALSE.equals(project.published()))
@@ -77,9 +80,10 @@ public class ProvenSkillService {
                 .toList();
 
         Map<String, String> translated = translationStoreService.publishedFields(
+                publishedTranslations,
                 TranslationContentType.PROVEN_SKILL,
                 definition.id(),
-                locale
+                definition.translatableFields()
         );
 
         List<ProjectResponseDTO> relatedProjects = projects.stream()

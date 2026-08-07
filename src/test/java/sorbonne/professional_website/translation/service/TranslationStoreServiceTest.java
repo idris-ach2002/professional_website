@@ -64,6 +64,47 @@ class TranslationStoreServiceTest {
         )).isInstanceOf(IllegalArgumentException.class);
     }
 
+
+    @Test
+    void publishedTranslationsLoadsOneLocaleInOneQuery() {
+        when(repository.findByLocaleAndStatus("en", TranslationStatus.PUBLISHED))
+                .thenReturn(List.of(
+                        translation("title", "Hello", hashService.hash("Bonjour")),
+                        translation("description", "Technical project", hashService.hash("Projet technique"))
+                ));
+
+        var published = service.publishedTranslations("en-GB");
+        Map<String, String> fields = service.publishedFields(
+                published,
+                TranslationContentType.PROJECT,
+                "42",
+                projectSource().fields()
+        );
+
+        assertThat(fields)
+                .containsEntry("title", "Hello")
+                .containsEntry("description", "Technical project");
+        verify(repository).findByLocaleAndStatus("en", TranslationStatus.PUBLISHED);
+    }
+
+    @Test
+    void publishedTranslationIndexRejectsStaleFields() {
+        when(repository.findByLocaleAndStatus("en", TranslationStatus.PUBLISHED))
+                .thenReturn(List.of(
+                        translation("title", "Hello", hashService.hash("Ancien titre")),
+                        translation("description", "Technical project", hashService.hash("Projet technique"))
+                ));
+
+        var published = service.publishedTranslations("en");
+
+        assertThat(service.publishedFields(
+                published,
+                TranslationContentType.PROJECT,
+                "42",
+                projectSource().fields()
+        )).isEmpty();
+    }
+
     @Test
     void publishedFieldsReturnsCompleteFreshPublishedTranslation() {
         TranslatableContent source = projectSource();
