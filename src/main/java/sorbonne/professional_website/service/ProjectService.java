@@ -1,6 +1,7 @@
 package sorbonne.professional_website.service;
 
 import org.springframework.stereotype.Service;
+import sorbonne.professional_website.cache.PortfolioChangePublisher;
 import org.springframework.transaction.annotation.Transactional;
 import sorbonne.professional_website.dto.request.ProjectRequestDTO;
 import sorbonne.professional_website.dto.response.ProjectResponseDTO;
@@ -19,13 +20,16 @@ public class ProjectService {
 
     private final ProjectRepository rpProject;
     private final WebsiteVersionRepository rpWebsiteVersion;
+    private final PortfolioChangePublisher changePublisher;
 
     public ProjectService(
             ProjectRepository rpProject,
-            WebsiteVersionRepository rpWebsiteVersion
+            WebsiteVersionRepository rpWebsiteVersion,
+            PortfolioChangePublisher changePublisher
     ) {
         this.rpProject = rpProject;
         this.rpWebsiteVersion = rpWebsiteVersion;
+        this.changePublisher = changePublisher;
     }
 
     public void createProject(ProjectRequestDTO projectRequestDTO) {
@@ -40,6 +44,7 @@ public class ProjectService {
         project.setWebsiteVersion(version);
 
         rpProject.save(project);
+        changePublisher.changed(version.getOwner().getOwnerId(), "project-direct-create");
     }
 
     @Transactional(readOnly = true)
@@ -60,11 +65,14 @@ public class ProjectService {
         Project project = findProjectById(projectId);
         ProjectMapper.updateEntityFromRequest(project, projectRequestDTO);
         rpProject.save(project);
+        changePublisher.changed(project.getWebsiteVersion().getOwner().getOwnerId(), "project-direct-update");
     }
 
     public void deleteProject(Long projectId) {
         Project project = findProjectById(projectId);
+        Long ownerId = project.getWebsiteVersion().getOwner().getOwnerId();
         rpProject.delete(project);
+        changePublisher.changed(ownerId, "project-direct-delete");
     }
 
     private Project findProjectById(Long projectId) {

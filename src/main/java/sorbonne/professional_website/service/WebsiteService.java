@@ -1,12 +1,15 @@
 package sorbonne.professional_website.service;
 
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import sorbonne.professional_website.cache.PublicPortfolioCacheConfig;
 import sorbonne.professional_website.dto.response.OwnerResponseDTO;
 import sorbonne.professional_website.dto.response.ProjectResponseDTO;
 import sorbonne.professional_website.dto.response.PublicWebsiteSnapshotResponseDTO;
 import sorbonne.professional_website.entity.Owner;
 import sorbonne.professional_website.entity.Project;
+import sorbonne.professional_website.entity.WebsiteVersion;
 import sorbonne.professional_website.exception.ResourceNotFoundException;
 import sorbonne.professional_website.mapper.ProjectMapper;
 import sorbonne.professional_website.repository.OwnerRepository;
@@ -29,65 +32,62 @@ public class WebsiteService {
         this.localizationService = localizationService;
     }
 
+    @Cacheable(cacheNames = PublicPortfolioCacheConfig.WEBSITE_LIST_CACHE, key = "#locale == null ? 'fr' : #locale.toLowerCase()", sync = true)
     public List<OwnerResponseDTO> getAllPublicWebsites(String locale) {
-        return rpOwner.findAll()
+        return rpOwner.findAllPublicOwners()
                 .stream()
-                .filter(owner -> Boolean.TRUE.equals(owner.getActive()))
-                .filter(owner -> owner.getActiveWebsiteVersion().isPresent())
-                .map(owner -> localizationService.localize(owner, locale))
+                .map(owner -> localizationService.localizePublic(owner, locale))
                 .toList();
     }
 
+    @Cacheable(cacheNames = PublicPortfolioCacheConfig.WEBSITE_CACHE, key = "#ownerId + ':' + (#locale == null ? 'fr' : #locale.toLowerCase())", sync = true)
     public OwnerResponseDTO getPublicWebsiteByOwnerId(Long ownerId, String locale) {
-        Owner owner = getPublicOwner(ownerId);
-        return localizationService.localize(owner, locale);
+        return localizationService.localizePublic(getPublicOwner(ownerId), locale);
     }
 
+    @Cacheable(cacheNames = PublicPortfolioCacheConfig.WEBSITE_CACHE, key = "'default:' + (#locale == null ? 'fr' : #locale.toLowerCase())", sync = true)
     public OwnerResponseDTO getFirstOwner(String locale) {
-        Owner owner = rpOwner.findFirstByOrderByOwnerIdAsc()
-                .orElseThrow(() -> new ResourceNotFoundException("Owner"));
-        return localizationService.localize(owner, locale);
+        return localizationService.localizePublic(getDefaultPublicOwner(), locale);
     }
 
+    @Cacheable(cacheNames = PublicPortfolioCacheConfig.SEO_CACHE, key = "'default'", sync = true)
     public PublicWebsiteSnapshotResponseDTO getPublicSeoSnapshot() {
-        Owner owner = rpOwner.findFirstByOrderByOwnerIdAsc()
-                .orElseThrow(() -> new ResourceNotFoundException("Owner"));
+        Owner owner = getDefaultPublicOwner();
         return new PublicWebsiteSnapshotResponseDTO(
                 Instant.now().toString(),
-                localizationService.localize(owner, "fr"),
-                localizationService.localize(owner, "en")
+                localizationService.localizePublic(owner, "fr"),
+                localizationService.localizePublic(owner, "en")
         );
     }
 
+    @Cacheable(cacheNames = PublicPortfolioCacheConfig.PROJECT_CACHE, key = "'default:' + #slug + ':' + (#locale == null ? 'fr' : #locale.toLowerCase())", sync = true)
     public ProjectResponseDTO getDefaultProjectBySlug(String slug, String locale) {
-        Owner owner = rpOwner.findFirstByOrderByOwnerIdAsc()
-                .orElseThrow(() -> new ResourceNotFoundException("Owner"));
+        Owner owner = getDefaultPublicOwner();
         return localizeProject(findProject(owner, slug), locale);
     }
 
+    @Cacheable(cacheNames = PublicPortfolioCacheConfig.PROJECT_CACHE, key = "#ownerId + ':' + #slug + ':' + (#locale == null ? 'fr' : #locale.toLowerCase())", sync = true)
     public ProjectResponseDTO getProjectBySlug(Long ownerId, String slug, String locale) {
-        Owner owner = getPublicOwner(ownerId);
-        return localizeProject(findProject(owner, slug), locale);
+        return localizeProject(findProject(getPublicOwner(ownerId), slug), locale);
+    }
+
+    private Owner getDefaultPublicOwner() {
+        return rpOwner.findAllPublicOwners().stream()
+                .findFirst()
+                .orElseThrow(() -> new ResourceNotFoundException("Owner"));
     }
 
     private Owner getPublicOwner(Long ownerId) {
-        Owner owner = rpOwner.findById(ownerId)
-                .orElseThrow(() -> new ResourceNotFoundException("Owner"));
-        if (!Boolean.TRUE.equals(owner.getActive())) {
-            throw new ResourceNotFoundException("Website");
-        }
-        if (owner.getActiveWebsiteVersion().isEmpty()) {
-            throw new ResourceNotFoundException("Active WebsiteVersion");
-        }
-        return owner;
+        return rpOwner.findPublicOwnerById(ownerId)
+                .orElseThrow(() -> new ResourceNotFoundException("Website"));
     }
 
     private Project findProject(Owner owner, String slug) {
-        return owner.getActiveWebsiteVersion()
-                .orElseThrow(() -> new ResourceNotFoundException("Active WebsiteVersion"))
-                .getProjects()
+        WebsiteVersion publicVersion = owner.getActivePublishedWebsiteVersion()
+                .orElseThrow(() -> new ResourceNotFoundException("Active WebsiteVersion"));
+        return publicVersion.getProjects()
                 .stream()
-                .filter(project -> !Boolean.FALSE.equals(project.getPublished()))
+                .filter(project -> Boolean.TRUE.equals(project.getPublished()))
                 .filter(project -> slugify(project.getTitle()).equals(slugify(slug)))
                 .findFirst()
                 .orElseThrow(() -> new ResourceNotFoundException("Project"));

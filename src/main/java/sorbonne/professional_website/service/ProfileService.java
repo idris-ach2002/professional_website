@@ -1,6 +1,7 @@
 package sorbonne.professional_website.service;
 
 import org.springframework.stereotype.Service;
+import sorbonne.professional_website.cache.PortfolioChangePublisher;
 import org.springframework.transaction.annotation.Transactional;
 import sorbonne.professional_website.dto.request.ProfileRequestDTO;
 import sorbonne.professional_website.dto.response.ProfileResponseDTO;
@@ -16,14 +17,17 @@ import java.util.List;
 public class ProfileService {
 
     private final ProfileRepository rpProfile;
+    private final PortfolioChangePublisher changePublisher;
 
-    public ProfileService(ProfileRepository rpProfile) {
+    public ProfileService(ProfileRepository rpProfile, PortfolioChangePublisher changePublisher) {
         this.rpProfile = rpProfile;
+        this.changePublisher = changePublisher;
     }
 
     public void createProfile(ProfileRequestDTO profileRequestDTO) {
         Profile profile = ProfileMapper.fromRequest(profileRequestDTO);
         rpProfile.save(profile);
+        changePublisher.changed(null, "profile-direct-write");
     }
 
     @Transactional(readOnly = true)
@@ -44,11 +48,13 @@ public class ProfileService {
         Profile profile = findProfileById(profileId);
         ProfileMapper.updateEntityFromRequest(profile, profileRequestDTO);
         rpProfile.save(profile);
+        changePublisher.changed(null, "profile-direct-write");
     }
 
     public void deleteProfile(Long profileId) {
         Profile profile = findProfileById(profileId);
         rpProfile.delete(profile);
+        changePublisher.changed(null, "profile-direct-delete");
     }
 
     private Profile findProfileById(Long profileId) {

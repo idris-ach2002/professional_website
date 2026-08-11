@@ -1,6 +1,7 @@
 package sorbonne.professional_website.service;
 
 import org.springframework.stereotype.Service;
+import sorbonne.professional_website.cache.PortfolioChangePublisher;
 import org.springframework.transaction.annotation.Transactional;
 import sorbonne.professional_website.dto.request.TimelineRequestDTO;
 import sorbonne.professional_website.dto.response.TimelineResponseDTO;
@@ -16,14 +17,17 @@ import java.util.List;
 public class TimelineService {
 
     private final TimelineRepository rpTimeline;
+    private final PortfolioChangePublisher changePublisher;
 
-    public TimelineService(TimelineRepository rpTimeline) {
+    public TimelineService(TimelineRepository rpTimeline, PortfolioChangePublisher changePublisher) {
         this.rpTimeline = rpTimeline;
+        this.changePublisher = changePublisher;
     }
 
     public void createTimeline(TimelineRequestDTO timelineRequestDTO) {
         Timeline timeline = TimelineMapper.fromRequest(timelineRequestDTO);
         rpTimeline.save(timeline);
+        changePublisher.changed(null, "timeline-direct-write");
     }
 
     @Transactional(readOnly = true)
@@ -44,11 +48,13 @@ public class TimelineService {
         Timeline timeline = findTimelineById(timelineId);
         TimelineMapper.updateEntityFromRequest(timeline, timelineRequestDTO);
         rpTimeline.save(timeline);
+        changePublisher.changed(null, "timeline-direct-write");
     }
 
     public void deleteTimeline(Long timelineId) {
         Timeline timeline = findTimelineById(timelineId);
         rpTimeline.delete(timeline);
+        changePublisher.changed(null, "timeline-direct-delete");
     }
 
     private Timeline findTimelineById(Long timelineId) {

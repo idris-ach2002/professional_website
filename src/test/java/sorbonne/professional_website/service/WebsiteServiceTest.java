@@ -35,18 +35,18 @@ class WebsiteServiceTest {
     }
 
     @Test
-    void defaultWebsiteUsesTheFirstOwner() {
+    void defaultWebsiteUsesTheFirstActivePublishedOwner() {
         Owner owner = new Owner();
-        when(ownerRepository.findFirstByOrderByOwnerIdAsc()).thenReturn(Optional.of(owner));
+        when(ownerRepository.findAllPublicOwners()).thenReturn(List.of(owner));
 
         service.getFirstOwner("en");
 
-        verify(localizationService).localize(owner, "en");
+        verify(localizationService).localizePublic(owner, "en");
     }
 
     @Test
-    void missingDefaultOwnerProducesAResourceNotFoundError() {
-        when(ownerRepository.findFirstByOrderByOwnerIdAsc()).thenReturn(Optional.empty());
+    void missingDefaultPublicOwnerProducesAResourceNotFoundError() {
+        when(ownerRepository.findAllPublicOwners()).thenReturn(List.of());
 
         assertThatThrownBy(() -> service.getFirstOwner("fr"))
                 .isInstanceOf(ResourceNotFoundException.class)
@@ -54,21 +54,29 @@ class WebsiteServiceTest {
     }
 
     @Test
-    void seoSnapshotUsesTheSameOwnerForFrenchAndEnglish() {
+    void ownerLookupRejectsInactiveOrUnpublishedContentAtRepositoryBoundary() {
+        when(ownerRepository.findPublicOwnerById(99L)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.getPublicWebsiteByOwnerId(99L, "fr"))
+                .isInstanceOf(ResourceNotFoundException.class);
+    }
+
+    @Test
+    void seoSnapshotUsesTheSamePublicOwnerForFrenchAndEnglish() {
         Owner owner = new Owner();
         OwnerResponseDTO fr = ownerDto("fr");
         OwnerResponseDTO en = ownerDto("en");
-        when(ownerRepository.findFirstByOrderByOwnerIdAsc()).thenReturn(Optional.of(owner));
-        when(localizationService.localize(owner, "fr")).thenReturn(fr);
-        when(localizationService.localize(owner, "en")).thenReturn(en);
+        when(ownerRepository.findAllPublicOwners()).thenReturn(List.of(owner));
+        when(localizationService.localizePublic(owner, "fr")).thenReturn(fr);
+        when(localizationService.localizePublic(owner, "en")).thenReturn(en);
 
         var snapshot = service.getPublicSeoSnapshot();
 
         assertThat(snapshot.generatedAt()).isNotNull();
         assertThat(snapshot.fr()).isSameAs(fr);
         assertThat(snapshot.en()).isSameAs(en);
-        verify(localizationService).localize(owner, "fr");
-        verify(localizationService).localize(owner, "en");
+        verify(localizationService).localizePublic(owner, "fr");
+        verify(localizationService).localizePublic(owner, "en");
     }
 
     private static OwnerResponseDTO ownerDto(String locale) {
@@ -77,5 +85,4 @@ class WebsiteServiceTest {
                 List.of(), null, null, List.of(), List.of(), locale, List.of()
         );
     }
-
 }

@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.persistence.EntityNotFoundException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import sorbonne.professional_website.cache.PortfolioChangePublisher;
 import sorbonne.professional_website.dto.request.ProfileRequestDTO;
 import sorbonne.professional_website.dto.request.PortfolioRestoreRequestDTO;
 import sorbonne.professional_website.dto.request.ProjectRequestDTO;
@@ -55,19 +56,22 @@ public class WebsiteVersionService {
     private final ProjectRepository rpProject;
     private final StorageService storageService;
     private final ObjectMapper objectMapper;
+    private final PortfolioChangePublisher changePublisher;
 
     public WebsiteVersionService(
             OwnerRepository rpOwner,
             WebsiteVersionRepository rpWebsiteVersion,
             ProjectRepository rpProject,
             StorageService storageService,
-            ObjectMapper objectMapper
+            ObjectMapper objectMapper,
+            PortfolioChangePublisher changePublisher
     ) {
         this.rpOwner = rpOwner;
         this.rpWebsiteVersion = rpWebsiteVersion;
         this.rpProject = rpProject;
         this.storageService = storageService;
         this.objectMapper = objectMapper;
+        this.changePublisher = changePublisher;
     }
 
     @Transactional(readOnly = true)
@@ -123,6 +127,7 @@ public class WebsiteVersionService {
 
 
         WebsiteVersion savedVersion = rpWebsiteVersion.save(version);
+        changePublisher.changed(ownerId, "version-created");
         return WebsiteVersionMapper.toResponse(savedVersion);
     }
 
@@ -159,7 +164,9 @@ public class WebsiteVersionService {
         copiedVersion.clearAndAttachProjects(copyProjects(sourceVersion.getProjects()));
 
 
-        return WebsiteVersionMapper.toResponse(rpWebsiteVersion.save(copiedVersion));
+        WebsiteVersion savedVersion = rpWebsiteVersion.save(copiedVersion);
+        changePublisher.changed(ownerId, "version-copied");
+        return WebsiteVersionMapper.toResponse(savedVersion);
     }
 
     public WebsiteVersionResponseDTO updateVersion(Long ownerId, Long versionId, WebsiteVersionRequestDTO versionDTO) {
@@ -180,7 +187,9 @@ public class WebsiteVersionService {
             return activateVersion(ownerId, versionId);
         }
 
-        return WebsiteVersionMapper.toResponse(rpWebsiteVersion.save(version));
+        WebsiteVersion savedVersion = rpWebsiteVersion.save(version);
+        changePublisher.changed(ownerId, "version-updated");
+        return WebsiteVersionMapper.toResponse(savedVersion);
     }
 
     public WebsiteVersionResponseDTO activateVersion(Long ownerId, Long versionId) {
@@ -188,12 +197,17 @@ public class WebsiteVersionService {
 
         WebsiteVersion version = findVersionByOwner(ownerId, versionId);
 
-        rpWebsiteVersion.deactivateAllByOwnerId(ownerId);
+        // Do not bulk-update the managed target itself: JPQL bulk updates bypass
+        // the persistence context and could otherwise leave an already-active
+        // target stale in memory while the database row becomes inactive.
+        rpWebsiteVersion.deactivateOthersByOwnerId(ownerId, versionId);
 
         version.setActive(true);
         version.setPublished(true);
 
-        return WebsiteVersionMapper.toResponse(rpWebsiteVersion.saveAndFlush(version));
+        WebsiteVersion savedVersion = rpWebsiteVersion.saveAndFlush(version);
+        changePublisher.changed(ownerId, "version-activated");
+        return WebsiteVersionMapper.toResponse(savedVersion);
     }
 
     public WebsiteVersionResponseDTO createOrReplaceProfile(
@@ -206,7 +220,9 @@ public class WebsiteVersionService {
         Profile profile = ProfileMapper.fromRequest(profileRequestDTO);
         version.attachProfile(profile);
 
-        return WebsiteVersionMapper.toResponse(rpWebsiteVersion.save(version));
+        WebsiteVersion savedVersion = rpWebsiteVersion.save(version);
+        changePublisher.changed(ownerId, "profile-updated");
+        return WebsiteVersionMapper.toResponse(savedVersion);
     }
 
     public WebsiteVersionResponseDTO createOrReplaceTimeline(
@@ -219,7 +235,9 @@ public class WebsiteVersionService {
         Timeline timeline = TimelineMapper.fromRequest(timelineRequestDTO);
         version.attachTimeline(timeline);
 
-        return WebsiteVersionMapper.toResponse(rpWebsiteVersion.save(version));
+        WebsiteVersion savedVersion = rpWebsiteVersion.save(version);
+        changePublisher.changed(ownerId, "timeline-updated");
+        return WebsiteVersionMapper.toResponse(savedVersion);
     }
 
     public WebsiteVersionResponseDTO addProject(
@@ -232,7 +250,9 @@ public class WebsiteVersionService {
         Project project = ProjectMapper.fromRequest(projectRequestDTO);
         version.addProject(project);
 
-        return WebsiteVersionMapper.toResponse(rpWebsiteVersion.save(version));
+        WebsiteVersion savedVersion = rpWebsiteVersion.save(version);
+        changePublisher.changed(ownerId, "project-added");
+        return WebsiteVersionMapper.toResponse(savedVersion);
     }
 
     @Transactional(readOnly = true)
@@ -263,7 +283,9 @@ public class WebsiteVersionService {
         Project project = findProjectByVersion(versionId, projectId);
         ProjectMapper.updateEntityFromRequest(project, projectRequestDTO);
 
-        return ProjectMapper.toResponse(rpProject.save(project));
+        Project savedProject = rpProject.save(project);
+        changePublisher.changed(ownerId, "project-updated");
+        return ProjectMapper.toResponse(savedProject);
     }
 
     public void deleteProject(Long ownerId, Long versionId, Long projectId) {
@@ -273,6 +295,7 @@ public class WebsiteVersionService {
 
         version.getProjects().remove(project);
         rpProject.delete(project);
+        changePublisher.changed(ownerId, "project-deleted");
     }
 
     public void deleteVersion(Long ownerId, Long versionId) {
@@ -285,6 +308,7 @@ public class WebsiteVersionService {
         }
 
         rpWebsiteVersion.delete(version);
+        changePublisher.changed(ownerId, "version-deleted");
     }
 
 

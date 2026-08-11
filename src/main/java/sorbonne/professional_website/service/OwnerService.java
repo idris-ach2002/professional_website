@@ -1,7 +1,7 @@
 package sorbonne.professional_website.service;
 
-import jakarta.persistence.EntityNotFoundException;
 import org.springframework.stereotype.Service;
+import sorbonne.professional_website.cache.PortfolioChangePublisher;
 import org.springframework.transaction.annotation.Transactional;
 import sorbonne.professional_website.dto.request.ProfileRequestDTO;
 import sorbonne.professional_website.dto.request.ProjectRequestDTO;
@@ -29,18 +29,22 @@ public class OwnerService {
 
     private final OwnerRepository rpOwner;
     private final WebsiteVersionRepository rpWebsiteVersion;
+    private final PortfolioChangePublisher changePublisher;
 
     public OwnerService(
             OwnerRepository rpOwner,
-            WebsiteVersionRepository rpWebsiteVersion
+            WebsiteVersionRepository rpWebsiteVersion,
+            PortfolioChangePublisher changePublisher
     ) {
         this.rpOwner = rpOwner;
         this.rpWebsiteVersion = rpWebsiteVersion;
+        this.changePublisher = changePublisher;
     }
 
     public void createOwner(OwnerRequestDTO ownerRequestDTO) {
         Owner owner = OwnerMapper.fromRequest(ownerRequestDTO);
-        rpOwner.save(owner);
+        Owner saved = rpOwner.save(owner);
+        changePublisher.changed(saved.getOwnerId(), "owner-created");
     }
 
     @Transactional(readOnly = true)
@@ -61,11 +65,13 @@ public class OwnerService {
         Owner owner = findOwnerById(ownerId);
         OwnerMapper.updateEntityFromRequest(owner, ownerRequestDTO);
         rpOwner.save(owner);
+        changePublisher.changed(ownerId, "owner-updated");
     }
 
     public void deleteOwner(Long ownerId) {
         Owner owner = findOwnerById(ownerId);
         rpOwner.delete(owner);
+        changePublisher.changed(ownerId, "owner-deleted");
     }
 
     /**
@@ -79,6 +85,7 @@ public class OwnerService {
         activeVersion.attachProfile(profile);
 
         rpWebsiteVersion.save(activeVersion);
+        changePublisher.changed(ownerId, "profile-updated-legacy");
     }
 
     /**
@@ -92,6 +99,7 @@ public class OwnerService {
         activeVersion.attachTimeline(timeline);
 
         rpWebsiteVersion.save(activeVersion);
+        changePublisher.changed(ownerId, "timeline-updated-legacy");
     }
 
     /**
@@ -105,6 +113,7 @@ public class OwnerService {
         activeVersion.addProject(project);
 
         rpWebsiteVersion.save(activeVersion);
+        changePublisher.changed(ownerId, "project-added-legacy");
     }
 
     private WebsiteVersion getOrCreateActiveVersion(Owner owner) {
