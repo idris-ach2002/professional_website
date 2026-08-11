@@ -3,7 +3,9 @@ package sorbonne.professional_website.analytics.service;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
 import org.springframework.transaction.annotation.Transactional;
 import sorbonne.professional_website.analytics.dto.AnalyticsEventRequest;
 import sorbonne.professional_website.analytics.dto.AnalyticsEventResponse;
@@ -18,13 +20,9 @@ import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.OffsetDateTime;
 import java.time.ZoneId;
-import java.util.Comparator;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.Objects;
-import java.util.stream.Collectors;
 
 @Service
 public class AnalyticsService {
@@ -33,17 +31,25 @@ public class AnalyticsService {
 
     private final AnalyticsEventRepository analyticsEventRepository;
     private final String hashSecret;
+    private final AnalyticsIngestionPipeline ingestionPipeline;
+    private final AnalyticsRateLimiter rateLimiter;
 
     public AnalyticsService(
             AnalyticsEventRepository analyticsEventRepository,
-            @Value("${app.analytics.hash-secret}") String hashSecret
+            @Value("${app.analytics.hash-secret}") String hashSecret,
+            AnalyticsIngestionPipeline ingestionPipeline,
+            AnalyticsRateLimiter rateLimiter
     ) {
         this.analyticsEventRepository = analyticsEventRepository;
         this.hashSecret = hashSecret;
+        this.ingestionPipeline = ingestionPipeline;
+        this.rateLimiter = rateLimiter;
     }
 
-    @Transactional
     public AnalyticsEventResponse track(AnalyticsEventRequest request, HttpServletRequest servletRequest) {
+        if (!rateLimiter.allow(servletRequest)) {
+            throw new ResponseStatusException(HttpStatus.TOO_MANY_REQUESTS, "Analytics rate limit exceeded");
+        }
         String userAgent = trim(servletRequest.getHeader("User-Agent"), 600);
         String country = firstNonBlank(
                 servletRequest.getHeader("CF-IPCountry"),
@@ -70,75 +76,67 @@ public class AnalyticsService {
                 .screenHeight(safePositiveInteger(request.screenHeight()))
                 .userAgent(userAgent)
                 .country(trim(country, 100))
+                .createdAt(OffsetDateTime.now())
                 .build();
 
-        return toResponse(analyticsEventRepository.save(event));
+        if (!ingestionPipeline.offer(event)) {
+            throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "Analytics queue is saturated");
+        }
+        return toResponse(event);
     }
 
     @Transactional(readOnly = true)
     public AnalyticsSummaryResponse summary(LocalDate from, LocalDate to, int recentLimit) {
-        LocalDate safeTo = to == null ? LocalDate.now(PARIS_ZONE) : to;
-        LocalDate safeFrom = from == null ? safeTo.minusDays(30) : from;
-
-        if (safeFrom.isAfter(safeTo)) {
-            LocalDate previousFrom = safeFrom;
-            safeFrom = safeTo;
-            safeTo = previousFrom;
-        }
-
-        OffsetDateTime fromDateTime = safeFrom.atStartOfDay(PARIS_ZONE).toOffsetDateTime();
-        OffsetDateTime toDateTime = safeTo.atTime(LocalTime.MAX).atZone(PARIS_ZONE).toOffsetDateTime();
-
-        List<AnalyticsEvent> events = analyticsEventRepository.findByCreatedAtBetweenOrderByCreatedAtDesc(
-                fromDateTime,
-                toDateTime
+        DateRange range = normalizeRange(from, to);
+        AnalyticsEventRepository.AnalyticsTotalsView totals = analyticsEventRepository.aggregateTotals(
+                range.fromDateTime(),
+                range.toDateTime()
         );
 
+        int topLimit = 8;
         List<AnalyticsEventResponse> recentEvents = analyticsEventRepository.findByCreatedAtBetweenOrderByCreatedAtDesc(
-                        fromDateTime,
-                        toDateTime,
+                        range.fromDateTime(),
+                        range.toDateTime(),
                         PageRequest.of(0, Math.max(1, Math.min(recentLimit, 200)))
                 )
                 .stream()
                 .map(this::toResponse)
                 .toList();
 
-        long pageViews = countType(events, "page_view");
-        long cvClicks = countType(events, "cv_click");
-        long githubClicks = countType(events, "github_click");
-        long linkedinClicks = countType(events, "linkedin_click");
-        long projectViews = countType(events, "project_view");
+        Map<LocalDate, AnalyticsEventRepository.DailyMetricView> dailyByDate = analyticsEventRepository
+                .aggregateDaily(range.fromDateTime(), range.toDateTime())
+                .stream()
+                .collect(java.util.stream.Collectors.toMap(AnalyticsEventRepository.DailyMetricView::getDay, item -> item));
 
-        long uniqueVisitors = events.stream()
-                .map(AnalyticsEvent::getVisitorIdHash)
-                .filter(Objects::nonNull)
-                .distinct()
-                .count();
-
-        long sessions = events.stream()
-                .map(AnalyticsEvent::getSessionIdHash)
-                .filter(Objects::nonNull)
-                .distinct()
-                .count();
+        List<AnalyticsSummaryResponse.DailyMetric> daily = range.from().datesUntil(range.to().plusDays(1))
+                .map(date -> {
+                    AnalyticsEventRepository.DailyMetricView metric = dailyByDate.get(date);
+                    return new AnalyticsSummaryResponse.DailyMetric(
+                            date,
+                            metric == null ? 0L : metric.getPageViews(),
+                            metric == null ? 0L : metric.getUniqueVisitors()
+                    );
+                })
+                .toList();
 
         return new AnalyticsSummaryResponse(
-                safeFrom.toString(),
-                safeTo.toString(),
-                events.size(),
-                pageViews,
-                uniqueVisitors,
-                sessions,
-                cvClicks,
-                githubClicks,
-                linkedinClicks,
-                projectViews,
-                dailyMetrics(events, safeFrom, safeTo),
-                topMetrics(events, AnalyticsEvent::getPagePath, 8),
-                topMetrics(events, AnalyticsEvent::getProjectSlug, 8),
-                topMetrics(events, AnalyticsEvent::getSource, 8),
-                topMetrics(events, AnalyticsEvent::getDeviceType, 8),
-                topMetrics(events, AnalyticsEvent::getBrowser, 8),
-                topMetrics(events, AnalyticsEvent::getRecruiterCode, 8),
+                range.from().toString(),
+                range.to().toString(),
+                totals == null ? 0L : totals.getTotalEvents(),
+                totals == null ? 0L : totals.getPageViews(),
+                totals == null ? 0L : totals.getUniqueVisitors(),
+                totals == null ? 0L : totals.getSessions(),
+                totals == null ? 0L : totals.getCvClicks(),
+                totals == null ? 0L : totals.getGithubClicks(),
+                totals == null ? 0L : totals.getLinkedinClicks(),
+                totals == null ? 0L : totals.getProjectViews(),
+                daily,
+                metricItems(analyticsEventRepository.topPages(range.fromDateTime(), range.toDateTime(), topLimit)),
+                metricItems(analyticsEventRepository.topProjects(range.fromDateTime(), range.toDateTime(), topLimit)),
+                metricItems(analyticsEventRepository.topSources(range.fromDateTime(), range.toDateTime(), topLimit)),
+                metricItems(analyticsEventRepository.topDevices(range.fromDateTime(), range.toDateTime(), topLimit)),
+                metricItems(analyticsEventRepository.topBrowsers(range.fromDateTime(), range.toDateTime(), topLimit)),
+                metricItems(analyticsEventRepository.topRecruiters(range.fromDateTime(), range.toDateTime(), topLimit)),
                 recentEvents
         );
     }
@@ -146,21 +144,11 @@ public class AnalyticsService {
 
     @Transactional(readOnly = true)
     public List<AnalyticsEventResponse> recentEvents(LocalDate from, LocalDate to, int limit) {
-        LocalDate safeTo = to == null ? LocalDate.now(PARIS_ZONE) : to;
-        LocalDate safeFrom = from == null ? safeTo.minusDays(30) : from;
-
-        if (safeFrom.isAfter(safeTo)) {
-            LocalDate previousFrom = safeFrom;
-            safeFrom = safeTo;
-            safeTo = previousFrom;
-        }
-
-        OffsetDateTime fromDateTime = safeFrom.atStartOfDay(PARIS_ZONE).toOffsetDateTime();
-        OffsetDateTime toDateTime = safeTo.atTime(LocalTime.MAX).atZone(PARIS_ZONE).toOffsetDateTime();
+        DateRange range = normalizeRange(from, to);
 
         return analyticsEventRepository.findByCreatedAtBetweenOrderByCreatedAtDesc(
-                        fromDateTime,
-                        toDateTime,
+                        range.fromDateTime(),
+                        range.toDateTime(),
                         PageRequest.of(0, Math.max(1, Math.min(limit, 300)))
                 )
                 .stream()
@@ -168,50 +156,36 @@ public class AnalyticsService {
                 .toList();
     }
 
-    private List<AnalyticsSummaryResponse.DailyMetric> dailyMetrics(
-            List<AnalyticsEvent> events,
+    private List<AnalyticsSummaryResponse.MetricItem> metricItems(
+            List<AnalyticsEventRepository.MetricCountView> metrics
+    ) {
+        return metrics.stream()
+                .map(item -> new AnalyticsSummaryResponse.MetricItem(item.getLabel(), item.getValue()))
+                .toList();
+    }
+
+    private DateRange normalizeRange(LocalDate from, LocalDate to) {
+        LocalDate safeTo = to == null ? LocalDate.now(PARIS_ZONE) : to;
+        LocalDate safeFrom = from == null ? safeTo.minusDays(30) : from;
+        if (safeFrom.isAfter(safeTo)) {
+            LocalDate previousFrom = safeFrom;
+            safeFrom = safeTo;
+            safeTo = previousFrom;
+        }
+        return new DateRange(
+                safeFrom,
+                safeTo,
+                safeFrom.atStartOfDay(PARIS_ZONE).toOffsetDateTime(),
+                safeTo.atTime(LocalTime.MAX).atZone(PARIS_ZONE).toOffsetDateTime()
+        );
+    }
+
+    private record DateRange(
             LocalDate from,
-            LocalDate to
-    ) {
-        Map<LocalDate, List<AnalyticsEvent>> byDate = events.stream()
-                .collect(Collectors.groupingBy(event -> event.getCreatedAt().atZoneSameInstant(PARIS_ZONE).toLocalDate()));
-
-        return from.datesUntil(to.plusDays(1))
-                .map(date -> {
-                    List<AnalyticsEvent> dayEvents = byDate.getOrDefault(date, List.of());
-                    long dayPageViews = countType(dayEvents, "page_view");
-                    long dayUniqueVisitors = dayEvents.stream()
-                            .map(AnalyticsEvent::getVisitorIdHash)
-                            .filter(Objects::nonNull)
-                            .distinct()
-                            .count();
-                    return new AnalyticsSummaryResponse.DailyMetric(date, dayPageViews, dayUniqueVisitors);
-                })
-                .toList();
-    }
-
-    private List<AnalyticsSummaryResponse.MetricItem> topMetrics(
-            List<AnalyticsEvent> events,
-            java.util.function.Function<AnalyticsEvent, String> extractor,
-            int limit
-    ) {
-        return events.stream()
-                .map(extractor)
-                .map(value -> value == null || value.isBlank() ? "Non renseigné" : value.trim())
-                .collect(Collectors.groupingBy(value -> value, Collectors.counting()))
-                .entrySet()
-                .stream()
-                .sorted(Map.Entry.<String, Long>comparingByValue(Comparator.reverseOrder()))
-                .limit(limit)
-                .map(entry -> new AnalyticsSummaryResponse.MetricItem(entry.getKey(), entry.getValue()))
-                .toList();
-    }
-
-    private long countType(List<AnalyticsEvent> events, String type) {
-        return events.stream()
-                .filter(event -> type.equalsIgnoreCase(event.getEventType()))
-                .count();
-    }
+            LocalDate to,
+            OffsetDateTime fromDateTime,
+            OffsetDateTime toDateTime
+    ) { }
 
     private AnalyticsEventResponse toResponse(AnalyticsEvent event) {
         return new AnalyticsEventResponse(

@@ -2,8 +2,6 @@ package sorbonne.professional_website.analytics.entity;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
@@ -26,9 +24,9 @@ import java.util.UUID;
 public class AnalyticsEvent {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
     @Column(name = "id", nullable = false, updatable = false)
-    private UUID id;
+    @Builder.Default
+    private UUID id = UUID.randomUUID();
 
     @Column(name = "event_type", nullable = false, length = 60)
     private String eventType;
@@ -92,6 +90,9 @@ public class AnalyticsEvent {
 
     @PrePersist
     void prePersist() {
+        if (id == null) {
+            id = UUID.randomUUID();
+        }
         if (createdAt == null) {
             createdAt = OffsetDateTime.now();
         }

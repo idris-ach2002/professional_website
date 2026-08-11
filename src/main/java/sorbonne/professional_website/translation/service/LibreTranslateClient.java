@@ -1,38 +1,66 @@
 package sorbonne.professional_website.translation.service;
 
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 import sorbonne.professional_website.translation.config.LibreTranslateProperties;
 
+import java.util.AbstractMap;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executor;
+import java.util.concurrent.TimeUnit;
 
 @Component
 public class LibreTranslateClient {
 
     private final RestClient restClient;
     private final LibreTranslateProperties properties;
+    private final Executor virtualIoExecutor;
 
-    public LibreTranslateClient(RestClient libreTranslateRestClient, LibreTranslateProperties properties) {
+    public LibreTranslateClient(
+            RestClient libreTranslateRestClient,
+            LibreTranslateProperties properties,
+            @Qualifier("virtualIoExecutor") Executor virtualIoExecutor
+    ) {
         this.restClient = libreTranslateRestClient;
         this.properties = properties;
+        this.virtualIoExecutor = virtualIoExecutor;
     }
 
+    /**
+     * Independent text fields are translated concurrently on the bounded I/O
+     * virtual-thread I/O lane. Inputs are immutable snapshots; no JPA entity crosses a thread
+     * boundary and output order remains deterministic.
+     */
     public Map<String, String> translate(Map<String, String> fields, String sourceLocale, String targetLocale) {
-        if (!properties.enabled()) {
-            throw new IllegalStateException("LibreTranslate is disabled");
-        }
+        if (!properties.enabled()) throw new IllegalStateException("LibreTranslate is disabled");
+        if (fields == null || fields.isEmpty()) return Map.of();
 
-        Map<String, String> translated = new LinkedHashMap<>();
-        fields.forEach((field, value) -> {
-            if (value == null || value.isBlank()) {
-                translated.put(field, value);
-                return;
-            }
-            translated.put(field, translatePreservingLines(value, sourceLocale, targetLocale));
-        });
-        return translated;
+        List<Map.Entry<String, String>> snapshot = List.copyOf(fields.entrySet());
+        List<CompletableFuture<Map.Entry<String, String>>> futures = snapshot.stream()
+                .map(entry -> CompletableFuture.<Map.Entry<String, String>>supplyAsync(
+                        () -> new AbstractMap.SimpleImmutableEntry<>(entry.getKey(), translateValue(entry.getValue(), sourceLocale, targetLocale)),
+                        virtualIoExecutor
+                ))
+                .toList();
+
+        long timeoutMillis = Math.max(1_000L, properties.timeout().toMillis());
+        try {
+            CompletableFuture.allOf(futures.toArray(CompletableFuture[]::new))
+                    .orTimeout(timeoutMillis, TimeUnit.MILLISECONDS)
+                    .join();
+            Map<String, String> translated = new LinkedHashMap<>();
+            futures.stream().map(CompletableFuture::join)
+                    .forEach(entry -> translated.put(entry.getKey(), entry.getValue()));
+            return translated;
+        } catch (RuntimeException exception) {
+            futures.forEach(future -> future.cancel(true));
+            throw exception;
+        }
     }
 
     public boolean isReachable() {
@@ -47,6 +75,11 @@ public class LibreTranslateClient {
         } catch (RuntimeException exception) {
             return false;
         }
+    }
+
+    private String translateValue(String value, String sourceLocale, String targetLocale) {
+        if (value == null || value.isBlank()) return value;
+        return translatePreservingLines(value, sourceLocale, targetLocale);
     }
 
     private String translatePreservingLines(String text, String sourceLocale, String targetLocale) {

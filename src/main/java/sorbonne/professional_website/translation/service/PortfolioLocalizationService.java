@@ -29,7 +29,14 @@ public class PortfolioLocalizationService {
     }
 
     public OwnerResponseDTO localize(Owner owner, String requestedLocale) {
-        OwnerResponseDTO source = OwnerMapper.toResponse(owner);
+        return localizeSource(OwnerMapper.toResponse(owner), requestedLocale);
+    }
+
+    public OwnerResponseDTO localizePublic(Owner owner, String requestedLocale) {
+        return localizeSource(OwnerMapper.toPublicResponse(owner), requestedLocale);
+    }
+
+    private OwnerResponseDTO localizeSource(OwnerResponseDTO source, String requestedLocale) {
         String locale = localeNormalizer.normalize(requestedLocale);
 
         TranslationStoreService.PublishedTranslations publishedTranslations = translations.publishedTranslations(locale);
