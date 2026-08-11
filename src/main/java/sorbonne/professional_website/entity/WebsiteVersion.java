@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
+import org.hibernate.annotations.BatchSize;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -35,6 +36,11 @@ public class WebsiteVersion {
     @Column(name = "website_version_id")
     private Long id;
 
+    @Version
+    @Column(name = "row_version", nullable = false)
+    @Builder.Default
+    private long rowVersion = 0L;
+
     @Column(name = "version_tag", nullable = false, length = 80)
     private String versionTag;
 
@@ -64,11 +70,11 @@ public class WebsiteVersion {
     @JoinColumn(name = "owner_id", nullable = false)
     private Owner owner;
 
-    @OneToOne(cascade = CascadeType.ALL, orphanRemoval = true)
+    @OneToOne(fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true)
     @JoinColumn(name = "profile_id")
     private Profile profile;
 
-    @OneToOne(cascade = CascadeType.ALL, orphanRemoval = true)
+    @OneToOne(fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true)
     @JoinColumn(name = "timeline_id")
     private Timeline timeline;
 
@@ -78,6 +84,7 @@ public class WebsiteVersion {
             orphanRemoval = true
     )
     @OrderBy("displayOrder ASC, startDate DESC")
+    @BatchSize(size = 32)
     @Builder.Default
     private List<Project> projects = new ArrayList<>();
 

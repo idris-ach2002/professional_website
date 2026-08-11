@@ -9,6 +9,8 @@ import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.hibernate.annotations.BatchSize;
+
 @Entity
 @Table(name = "project")
 @Getter
@@ -62,7 +64,8 @@ public class Project {
     @Column(name = "documentation_url", length = 512)
     private String documentationUrl;
 
-    @ElementCollection(fetch = FetchType.EAGER)
+    @ElementCollection(fetch = FetchType.LAZY)
+    @BatchSize(size = 32)
     @CollectionTable(
             name = "project_stacks",
             joinColumns = @JoinColumn(name = "project_id")
@@ -71,7 +74,8 @@ public class Project {
     @Builder.Default
     private List<String> stacks = new ArrayList<>();
 
-    @ElementCollection(fetch = FetchType.EAGER)
+    @ElementCollection(fetch = FetchType.LAZY)
+    @BatchSize(size = 32)
     @CollectionTable(
             name = "project_features",
             joinColumns = @JoinColumn(name = "project_id")
@@ -80,7 +84,8 @@ public class Project {
     @Builder.Default
     private List<String> features = new ArrayList<>();
 
-    @ElementCollection(fetch = FetchType.EAGER)
+    @ElementCollection(fetch = FetchType.LAZY)
+    @BatchSize(size = 32)
     @CollectionTable(
             name = "project_links",
             joinColumns = @JoinColumn(name = "project_id")

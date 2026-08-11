@@ -17,6 +17,8 @@ public interface WebsiteVersionRepository extends JpaRepository<WebsiteVersion, 
 
     Optional<WebsiteVersion> findByOwnerOwnerIdAndActiveTrue(Long ownerId);
 
+    Optional<WebsiteVersion> findByOwnerOwnerIdAndActiveTrueAndPublishedTrue(Long ownerId);
+
     boolean existsByOwnerOwnerIdAndActiveTrue(Long ownerId);
 
     long countByOwnerOwnerId(Long ownerId);
@@ -28,4 +30,17 @@ public interface WebsiteVersionRepository extends JpaRepository<WebsiteVersion, 
         where w.owner.ownerId = :ownerId
     """)
     void deactivateAllByOwnerId(@Param("ownerId") Long ownerId);
+
+    @Modifying(flushAutomatically = true)
+    @Query("""
+        update WebsiteVersion w
+        set w.active = false
+        where w.owner.ownerId = :ownerId
+          and w.id <> :versionId
+          and w.active = true
+    """)
+    void deactivateOthersByOwnerId(
+            @Param("ownerId") Long ownerId,
+            @Param("versionId") Long versionId
+    );
 }

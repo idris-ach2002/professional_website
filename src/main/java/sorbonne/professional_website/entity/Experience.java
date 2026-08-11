@@ -8,6 +8,8 @@ import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.hibernate.annotations.BatchSize;
+
 @Entity
 @Table(name = "experience")
 @Getter
@@ -62,7 +64,8 @@ public class Experience {
     @Column(name = "website_url", length = 512)
     private String websiteUrl;
 
-    @ElementCollection(fetch = FetchType.EAGER)
+    @ElementCollection(fetch = FetchType.LAZY)
+    @BatchSize(size = 32)
     @CollectionTable(
             name = "experience_skills",
             joinColumns = @JoinColumn(name = "experience_id")

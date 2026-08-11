@@ -40,6 +40,35 @@ public final class OwnerMapper {
         );
     }
 
+    public static OwnerResponseDTO toPublicResponse(Owner owner) {
+        if (owner == null) {
+            return null;
+        }
+
+        WebsiteVersion activeVersion = owner.getActivePublishedWebsiteVersion().orElse(null);
+        List<Project> publicProjects = activeVersion == null || activeVersion.getProjects() == null
+                ? List.of()
+                : activeVersion.getProjects().stream()
+                        .filter(project -> Boolean.TRUE.equals(project.getPublished()))
+                        .toList();
+
+        return new OwnerResponseDTO(
+                owner.getOwnerId(),
+                owner.getName(),
+                owner.getFirstName(),
+                owner.getAge(),
+                owner.getActive(),
+                owner.getAddress(),
+                ContactInfoMapper.toResponseList(owner.getContacts()),
+                activeVersion != null ? ProfileMapper.toResponse(activeVersion.getProfile()) : null,
+                activeVersion != null ? TimelineMapper.toResponse(activeVersion.getTimeline()) : null,
+                ProjectMapper.toResponseList(publicProjects),
+                activeVersion == null ? List.of() : List.of(WebsiteVersionMapper.toSummaryResponse(activeVersion)),
+                "fr",
+                List.of()
+        );
+    }
+
     public static Owner fromRequest(OwnerRequestDTO ownerDTO) {
         if (ownerDTO == null) {
             return null;

@@ -7,6 +7,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
+import org.hibernate.annotations.BatchSize;
+
 @Entity
 @Table(name = "app_owner")
 @Getter
@@ -41,7 +43,8 @@ public class Owner {
     @Column(length = 256, nullable = false)
     private String address;
 
-    @ElementCollection(fetch = FetchType.EAGER)
+    @ElementCollection(fetch = FetchType.LAZY)
+    @BatchSize(size = 32)
     @CollectionTable(
             name = "owner_contacts",
             joinColumns = @JoinColumn(name = "owner_id")
@@ -61,8 +64,20 @@ public class Owner {
             orphanRemoval = true
     )
     @OrderBy("createdAt DESC")
+    @BatchSize(size = 16)
     @Builder.Default
     private List<WebsiteVersion> websiteVersions = new ArrayList<>();
+
+    public Optional<WebsiteVersion> getActivePublishedWebsiteVersion() {
+        if (websiteVersions == null) {
+            return Optional.empty();
+        }
+
+        return websiteVersions.stream()
+                .filter(version -> Boolean.TRUE.equals(version.getActive()))
+                .filter(version -> Boolean.TRUE.equals(version.getPublished()))
+                .findFirst();
+    }
 
     public Optional<WebsiteVersion> getActiveWebsiteVersion() {
         if (websiteVersions == null) {

@@ -67,6 +67,6 @@ public class Profile {
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 
-    @OneToOne(mappedBy = "profile")
+    @OneToOne(mappedBy = "profile", fetch = FetchType.LAZY)
     private WebsiteVersion websiteVersion;
 }

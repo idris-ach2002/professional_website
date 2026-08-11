@@ -35,7 +35,16 @@ class FlywayMigrationTest {
                     postgres.getPassword())) {
                 assertThat(queryInt(connection,
                         "SELECT COUNT(*) FROM flyway_schema_history WHERE success = TRUE"))
-                        .isEqualTo(3);
+                        .isEqualTo(5);
+                assertThat(queryBoolean(connection,
+                        "SELECT to_regclass('public.app_owner') IS NOT NULL"))
+                        .isTrue();
+                assertThat(queryBoolean(connection,
+                        "SELECT to_regclass('public.website_version') IS NOT NULL"))
+                        .isTrue();
+                assertThat(queryBoolean(connection,
+                        "SELECT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'website_version' AND column_name = 'row_version')"))
+                        .isTrue();
                 assertThat(queryBoolean(connection,
                         "SELECT to_regclass('public.analytics_event') IS NOT NULL"))
                         .isTrue();

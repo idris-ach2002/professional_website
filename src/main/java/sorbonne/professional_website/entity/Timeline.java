@@ -6,6 +6,8 @@ import lombok.*;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.hibernate.annotations.BatchSize;
+
 @Entity
 @Table(name = "timeline")
 @Getter
@@ -37,9 +39,10 @@ public class Timeline {
             orphanRemoval = true
     )
     @OrderBy("startDate DESC")
+    @BatchSize(size = 32)
     @Builder.Default
     private List<Experience> experiences = new ArrayList<>();
 
-    @OneToOne(mappedBy = "timeline")
+    @OneToOne(mappedBy = "timeline", fetch = FetchType.LAZY)
     private WebsiteVersion websiteVersion;
 }
