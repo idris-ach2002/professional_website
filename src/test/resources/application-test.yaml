@@ -22,12 +22,19 @@ spring:
     open-in-view: false
     show-sql: false
     hibernate:
-      ddl-auto: create-drop
+      ddl-auto: validate
 
-  # Les migrations disposent d'un test dédié sur une seconde base PostgreSQL
-  # afin de ne pas entrer en conflit avec la génération du schéma JPA.
+  # V22: every component/integration test boots from the same Flyway chain used
+  # in production, then Hibernate validates the resulting schema.
+  cache:
+    type: caffeine
+    cache-names: publicWebsite,publicWebsiteList,publicProject,publicSeoSnapshot
+    caffeine:
+      spec: maximumSize=64,expireAfterWrite=30s,recordStats
+
   flyway:
-    enabled: false
+    enabled: true
+    baseline-on-migrate: false
 
 portfolio:
   security:
@@ -53,3 +60,8 @@ translation:
     enabled: false
     base-url: http://127.0.0.1:5000
     timeout: 2s
+
+
+springdoc:
+  api-docs:
+    enabled: false

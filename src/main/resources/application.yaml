@@ -1,6 +1,10 @@
 server:
   port: ${PORT:8080}
   forward-headers-strategy: framework
+  compression:
+    enabled: true
+    min-response-size: 1024
+    mime-types: application/json,text/html,text/plain,text/css,application/javascript,image/svg+xml
   tomcat:
     max-swallow-size: ${MAX_SWALLOW_SIZE:12MB}
   servlet:
@@ -45,6 +49,18 @@ spring:
       hibernate:
         format_sql: false
         highlight_sql: false
+        default_batch_fetch_size: ${HIBERNATE_BATCH_FETCH_SIZE:32}
+        jdbc:
+          batch_size: ${HIBERNATE_JDBC_BATCH_SIZE:32}
+        order_inserts: true
+        order_updates: true
+        generate_statistics: ${HIBERNATE_GENERATE_STATISTICS:false}
+
+  cache:
+    type: caffeine
+    cache-names: publicWebsite,publicWebsiteList,publicProject,publicSeoSnapshot
+    caffeine:
+      spec: maximumSize=256,expireAfterWrite=120s,recordStats
 
   flyway:
     enabled: true
@@ -70,7 +86,7 @@ management:
   endpoints:
     web:
       exposure:
-        include: health
+        include: health,prometheus
 
 app:
   cors:
@@ -83,6 +99,25 @@ app:
   analytics:
     # Secret utilisé pour hasher les IDs visiteurs/sessions avant stockage.
     hash-secret: ${APP_ANALYTICS_HASH_SECRET:${PORTFOLIO_ADMIN_PASSWORD:local-analytics-secret}}
+    max-events-per-minute: ${APP_ANALYTICS_MAX_EVENTS_PER_MINUTE:120}
+
+  upload:
+    max-bytes: ${APP_UPLOAD_MAX_BYTES:10485760}
+
+  concurrency:
+    cpu-core-size: ${APP_CPU_CORE_SIZE:0}
+    cpu-max-size: ${APP_CPU_MAX_SIZE:0}
+    cpu-queue-capacity: ${APP_CPU_QUEUE_CAPACITY:128}
+    io-core-size: ${APP_IO_CORE_SIZE:0}
+    io-max-size: ${APP_IO_MAX_SIZE:0}
+    io-queue-capacity: ${APP_IO_QUEUE_CAPACITY:128}
+    virtual-io-max-concurrency: ${APP_VIRTUAL_IO_MAX_CONCURRENCY:0}
+    maintenance-core-size: ${APP_MAINTENANCE_CORE_SIZE:1}
+    maintenance-max-size: ${APP_MAINTENANCE_MAX_SIZE:2}
+    maintenance-queue-capacity: ${APP_MAINTENANCE_QUEUE_CAPACITY:64}
+    analytics-queue-capacity: ${APP_ANALYTICS_QUEUE_CAPACITY:512}
+    analytics-batch-size: ${APP_ANALYTICS_BATCH_SIZE:32}
+    analytics-flush-interval-ms: ${APP_ANALYTICS_FLUSH_INTERVAL_MS:750}
   frontend:
     # Origine utilisée comme fallback quand aucune URL redirect valide n'est fournie.
     origin: ${APP_FRONTEND_ORIGIN:https://idris-achabou.fit}
@@ -94,3 +129,9 @@ translation:
     enabled: ${LIBRETRANSLATE_ENABLED:true}
     base-url: ${LIBRETRANSLATE_BASE_URL:http://localhost:5000}
     timeout: ${LIBRETRANSLATE_TIMEOUT:45s}
+
+
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  packages-to-scan: sorbonne.professional_website

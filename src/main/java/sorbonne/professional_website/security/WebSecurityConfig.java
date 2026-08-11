@@ -41,6 +41,8 @@ class WebSecurityConfig {
                         // Pages publiques / ressources statiques.
                         .requestMatchers("/", "/login", "/error", "/favicon.ico").permitAll()
                         .requestMatchers(HttpMethod.GET, "/actuator/health").permitAll()
+                        .requestMatchers("/v3/api-docs/**").hasRole("ADMIN")
+                        .requestMatchers("/actuator/prometheus").hasRole("ADMIN")
                         .requestMatchers("/css/**", "/js/**", "/images/**", "/assets/**", "/webjars/**").permitAll()
 
                         // Admin HTML : Spring bloque ici si non connecté, puis /admin est redirigé vers le front.

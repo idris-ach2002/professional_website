@@ -26,9 +26,11 @@ import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 public class FileUploadController {
 
     private final StorageService storageService;
+    private final UploadPolicy uploadPolicy;
 
-    public FileUploadController(StorageService storageService) {
+    public FileUploadController(StorageService storageService, UploadPolicy uploadPolicy) {
         this.storageService = storageService;
+        this.uploadPolicy = uploadPolicy;
     }
 
     @GetMapping("/")
@@ -53,9 +55,12 @@ public class FileUploadController {
         String contentType = resolveContentType(file, filename);
         String displayName = file.getFilename() == null ? filename : file.getFilename();
 
+        String disposition = uploadPolicy.shouldForceDownload(displayName) ? "attachment" : "inline";
         return ResponseEntity.ok()
                 .contentType(MediaType.parseMediaType(contentType))
-                .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + displayName + "\"")
+                .header("X-Content-Type-Options", "nosniff")
+                .header("Content-Security-Policy", "sandbox; default-src 'none'; img-src 'self' data:; style-src 'unsafe-inline'")
+                .header(HttpHeaders.CONTENT_DISPOSITION, disposition + "; filename=\"" + displayName + "\"")
                 .body(file);
     }
 
@@ -80,7 +85,6 @@ public class FileUploadController {
         if (filename.endsWith(".jpg") || filename.endsWith(".jpeg")) return "image/jpeg";
         if (filename.endsWith(".webp")) return "image/webp";
         if (filename.endsWith(".gif")) return "image/gif";
-        if (filename.endsWith(".svg")) return "image/svg+xml";
         if (filename.endsWith(".avif")) return "image/avif";
         if (filename.endsWith(".txt")) return "text/plain";
         if (filename.endsWith(".csv")) return "text/csv";
@@ -96,6 +100,7 @@ public class FileUploadController {
     @PostMapping("/")
     @ResponseBody
     public ResponseEntity<Map<String, String>> handleFileUpload(@RequestParam("file") MultipartFile file) {
+        uploadPolicy.validate(file);
         StoredFile storedFile = storageService.store(file);
         String backendFileUrl = ServletUriComponentsBuilder
                 .fromCurrentContextPath()
