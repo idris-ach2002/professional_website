@@ -5,7 +5,8 @@ WORKDIR /app
 COPY pom.xml .
 COPY src ./src
 
-RUN mvn clean package -DskipTests
+# Tests are executed by CI (clean verify); the production image only compiles/packages main sources.
+RUN mvn clean package -Dmaven.test.skip=true
 
 FROM eclipse-temurin:21-jre
 

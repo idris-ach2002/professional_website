@@ -41,3 +41,10 @@ migration-backups/
 *.dump
 # Automated tests
 coverage/
+
+# Runtime / profiling artifacts
+*.log
+logs/
+heapdump*
+*.hprof
+.jfr/

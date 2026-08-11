@@ -33,6 +33,9 @@ jobs:
       - name: Autoriser Maven Wrapper
         run: chmod +x mvnw
 
+      - name: Vérifier les contrats V22
+        run: ./scripts/check-VPerf.sh
+
       - name: Vérifier le backend
         run: ./mvnw --batch-mode --no-transfer-progress clean verify
 
