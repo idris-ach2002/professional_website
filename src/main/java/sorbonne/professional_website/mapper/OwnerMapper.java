@@ -25,6 +25,7 @@ public final class OwnerMapper {
 
         return new OwnerResponseDTO(
                 owner.getOwnerId(),
+                owner.getRowVersion(),
                 owner.getName(),
                 owner.getFirstName(),
                 owner.getAge(),
@@ -54,6 +55,7 @@ public final class OwnerMapper {
 
         return new OwnerResponseDTO(
                 owner.getOwnerId(),
+                owner.getRowVersion(),
                 owner.getName(),
                 owner.getFirstName(),
                 owner.getAge(),

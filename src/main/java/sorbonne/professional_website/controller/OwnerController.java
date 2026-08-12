@@ -4,12 +4,10 @@ import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import sorbonne.professional_website.dto.request.ProfileRequestDTO;
-import sorbonne.professional_website.dto.request.ProjectRequestDTO;
-import sorbonne.professional_website.dto.request.TimelineRequestDTO;
 import sorbonne.professional_website.dto.request.OwnerRequestDTO;
 import sorbonne.professional_website.dto.response.OwnerResponseDTO;
 import sorbonne.professional_website.service.OwnerService;
+import sorbonne.professional_website.concurrency.HttpEntityTag;
 
 import java.util.List;
 
@@ -36,66 +34,32 @@ public class OwnerController {
 
     @GetMapping("/{ownerId}")
     public ResponseEntity<OwnerResponseDTO> getOwnerById(@PathVariable Long ownerId) {
-        return ResponseEntity.ok(srvOwner.getOwnerById(ownerId));
+        OwnerResponseDTO owner = srvOwner.getOwnerById(ownerId);
+        return ResponseEntity.ok()
+                .eTag(HttpEntityTag.owner(owner.ownerId(), owner.rowVersion()))
+                .body(owner);
     }
 
     @PutMapping("/{ownerId}")
-    public ResponseEntity<Void> updateOwner(
+    public ResponseEntity<OwnerResponseDTO> updateOwner(
             @PathVariable Long ownerId,
+            @RequestHeader(value = "If-Match", required = false) String ifMatch,
             @RequestBody @Valid OwnerRequestDTO ownerRequestDTO
     ) {
-        srvOwner.updateOwner(ownerId, ownerRequestDTO);
-        return ResponseEntity.noContent().build();
+        long expectedRevision = HttpEntityTag.requireRevision(ifMatch, "owner", ownerId);
+        OwnerResponseDTO updated = srvOwner.updateOwner(ownerId, expectedRevision, ownerRequestDTO);
+        return ResponseEntity.ok()
+                .eTag(HttpEntityTag.owner(updated.ownerId(), updated.rowVersion()))
+                .body(updated);
     }
 
     @DeleteMapping("/{ownerId}")
-    public ResponseEntity<Void> deleteOwner(@PathVariable Long ownerId) {
-        srvOwner.deleteOwner(ownerId);
+    public ResponseEntity<Void> deleteOwner(
+            @PathVariable Long ownerId,
+            @RequestHeader(value = "If-Match", required = false) String ifMatch
+    ) {
+        long expectedRevision = HttpEntityTag.requireRevision(ifMatch, "owner", ownerId);
+        srvOwner.deleteOwner(ownerId, expectedRevision);
         return ResponseEntity.noContent().build();
-    }
-
-    @PostMapping("/{ownerId}/profile")
-    public ResponseEntity<Void> createOrReplaceProfile(
-            @PathVariable Long ownerId,
-            @RequestBody @Valid ProfileRequestDTO profileRequestDTO
-    ) {
-        srvOwner.createOrReplaceProfile(ownerId, profileRequestDTO);
-        return ResponseEntity.status(HttpStatus.CREATED).build();
-    }
-
-    @PutMapping("/{ownerId}/profile")
-    public ResponseEntity<Void> updateProfile(
-            @PathVariable Long ownerId,
-            @RequestBody @Valid ProfileRequestDTO profileRequestDTO
-    ) {
-        srvOwner.createOrReplaceProfile(ownerId, profileRequestDTO);
-        return ResponseEntity.noContent().build();
-    }
-
-    @PostMapping("/{ownerId}/timeline")
-    public ResponseEntity<Void> createOrReplaceTimeline(
-            @PathVariable Long ownerId,
-            @RequestBody @Valid TimelineRequestDTO timelineRequestDTO
-    ) {
-        srvOwner.createOrReplaceTimeline(ownerId, timelineRequestDTO);
-        return ResponseEntity.status(HttpStatus.CREATED).build();
-    }
-
-    @PutMapping("/{ownerId}/timeline")
-    public ResponseEntity<Void> updateTimeline(
-            @PathVariable Long ownerId,
-            @RequestBody @Valid TimelineRequestDTO timelineRequestDTO
-    ) {
-        srvOwner.createOrReplaceTimeline(ownerId, timelineRequestDTO);
-        return ResponseEntity.noContent().build();
-    }
-
-    @PostMapping("/{ownerId}/projects")
-    public ResponseEntity<Void> addProjectToOwner(
-            @PathVariable Long ownerId,
-            @RequestBody @Valid ProjectRequestDTO projectRequestDTO
-    ) {
-        srvOwner.addProjectToOwner(ownerId, projectRequestDTO);
-        return ResponseEntity.status(HttpStatus.CREATED).build();
     }
 }

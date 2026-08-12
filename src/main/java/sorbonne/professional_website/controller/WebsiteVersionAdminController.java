@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import sorbonne.professional_website.dto.request.ProfileRequestDTO;
@@ -21,6 +22,7 @@ import sorbonne.professional_website.dto.response.PortfolioBackupResponseDTO;
 import sorbonne.professional_website.dto.response.PortfolioHealthReportResponseDTO;
 import sorbonne.professional_website.dto.response.WebsiteVersionResponseDTO;
 import sorbonne.professional_website.service.WebsiteVersionService;
+import sorbonne.professional_website.concurrency.HttpEntityTag;
 
 import java.util.List;
 
@@ -53,7 +55,10 @@ public class WebsiteVersionAdminController {
             @PathVariable Long ownerId,
             @PathVariable Long versionId
     ) {
-        return ResponseEntity.ok(srvWebsiteVersion.getVersion(ownerId, versionId));
+        WebsiteVersionResponseDTO version = srvWebsiteVersion.getVersion(ownerId, versionId);
+        return ResponseEntity.ok()
+                .eTag(HttpEntityTag.version(version.id(), version.contentRevision()))
+                .body(version);
     }
 
 
@@ -76,9 +81,12 @@ public class WebsiteVersionAdminController {
     @PutMapping("/{versionId}/activate-validated")
     public ResponseEntity<WebsiteVersionResponseDTO> activateVersionAfterValidation(
             @PathVariable Long ownerId,
-            @PathVariable Long versionId
+            @PathVariable Long versionId,
+            @RequestHeader(value = "If-Match", required = false) String ifMatch
     ) {
-        return ResponseEntity.ok(srvWebsiteVersion.activateVersionAfterValidation(ownerId, versionId));
+        long expectedRevision = HttpEntityTag.requireRevision(ifMatch, "version", versionId);
+        WebsiteVersionResponseDTO version = srvWebsiteVersion.activateVersionAfterValidation(ownerId, versionId, expectedRevision);
+        return ResponseEntity.ok().eTag(HttpEntityTag.version(version.id(), version.contentRevision())).body(version);
     }
 
     @PostMapping("/{versionId}/backup/export")
@@ -122,25 +130,33 @@ public class WebsiteVersionAdminController {
     public ResponseEntity<WebsiteVersionResponseDTO> updateVersion(
             @PathVariable Long ownerId,
             @PathVariable Long versionId,
+            @RequestHeader(value = "If-Match", required = false) String ifMatch,
             @RequestBody @Valid WebsiteVersionRequestDTO versionRequestDTO
     ) {
-        return ResponseEntity.ok(srvWebsiteVersion.updateVersion(ownerId, versionId, versionRequestDTO));
+        long expectedRevision = HttpEntityTag.requireRevision(ifMatch, "version", versionId);
+        WebsiteVersionResponseDTO version = srvWebsiteVersion.updateVersion(ownerId, versionId, expectedRevision, versionRequestDTO);
+        return ResponseEntity.ok().eTag(HttpEntityTag.version(version.id(), version.contentRevision())).body(version);
     }
 
     @PutMapping("/{versionId}/activate")
     public ResponseEntity<WebsiteVersionResponseDTO> activateVersion(
             @PathVariable Long ownerId,
-            @PathVariable Long versionId
+            @PathVariable Long versionId,
+            @RequestHeader(value = "If-Match", required = false) String ifMatch
     ) {
-        return ResponseEntity.ok(srvWebsiteVersion.activateVersion(ownerId, versionId));
+        long expectedRevision = HttpEntityTag.requireRevision(ifMatch, "version", versionId);
+        WebsiteVersionResponseDTO version = srvWebsiteVersion.activateVersion(ownerId, versionId, expectedRevision);
+        return ResponseEntity.ok().eTag(HttpEntityTag.version(version.id(), version.contentRevision())).body(version);
     }
 
     @DeleteMapping("/{versionId}")
     public ResponseEntity<Void> deleteVersion(
             @PathVariable Long ownerId,
-            @PathVariable Long versionId
+            @PathVariable Long versionId,
+            @RequestHeader(value = "If-Match", required = false) String ifMatch
     ) {
-        srvWebsiteVersion.deleteVersion(ownerId, versionId);
+        long expectedRevision = HttpEntityTag.requireRevision(ifMatch, "version", versionId);
+        srvWebsiteVersion.deleteVersion(ownerId, versionId, expectedRevision);
         return ResponseEntity.noContent().build();
     }
 
@@ -148,28 +164,38 @@ public class WebsiteVersionAdminController {
     public ResponseEntity<WebsiteVersionResponseDTO> createOrReplaceProfile(
             @PathVariable Long ownerId,
             @PathVariable Long versionId,
+            @RequestHeader(value = "If-Match", required = false) String ifMatch,
             @RequestBody @Valid ProfileRequestDTO profileRequestDTO
     ) {
-        return ResponseEntity.ok(srvWebsiteVersion.createOrReplaceProfile(ownerId, versionId, profileRequestDTO));
+        long expectedRevision = HttpEntityTag.requireRevision(ifMatch, "version", versionId);
+        WebsiteVersionResponseDTO version = srvWebsiteVersion.createOrReplaceProfile(ownerId, versionId, expectedRevision, profileRequestDTO);
+        return ResponseEntity.ok().eTag(HttpEntityTag.version(version.id(), version.contentRevision())).body(version);
     }
 
     @PutMapping("/{versionId}/timeline")
     public ResponseEntity<WebsiteVersionResponseDTO> createOrReplaceTimeline(
             @PathVariable Long ownerId,
             @PathVariable Long versionId,
+            @RequestHeader(value = "If-Match", required = false) String ifMatch,
             @RequestBody @Valid TimelineRequestDTO timelineRequestDTO
     ) {
-        return ResponseEntity.ok(srvWebsiteVersion.createOrReplaceTimeline(ownerId, versionId, timelineRequestDTO));
+        long expectedRevision = HttpEntityTag.requireRevision(ifMatch, "version", versionId);
+        WebsiteVersionResponseDTO version = srvWebsiteVersion.createOrReplaceTimeline(ownerId, versionId, expectedRevision, timelineRequestDTO);
+        return ResponseEntity.ok().eTag(HttpEntityTag.version(version.id(), version.contentRevision())).body(version);
     }
 
     @PostMapping("/{versionId}/projects")
     public ResponseEntity<WebsiteVersionResponseDTO> addProject(
             @PathVariable Long ownerId,
             @PathVariable Long versionId,
+            @RequestHeader(value = "If-Match", required = false) String ifMatch,
             @RequestBody @Valid ProjectRequestDTO projectRequestDTO
     ) {
+        long expectedRevision = HttpEntityTag.requireRevision(ifMatch, "version", versionId);
+        WebsiteVersionResponseDTO version = srvWebsiteVersion.addProject(ownerId, versionId, expectedRevision, projectRequestDTO);
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(srvWebsiteVersion.addProject(ownerId, versionId, projectRequestDTO));
+                .eTag(HttpEntityTag.version(version.id(), version.contentRevision()))
+                .body(version);
     }
 
     @GetMapping("/{versionId}/projects")
@@ -194,18 +220,22 @@ public class WebsiteVersionAdminController {
             @PathVariable Long ownerId,
             @PathVariable Long versionId,
             @PathVariable Long projectId,
+            @RequestHeader(value = "If-Match", required = false) String ifMatch,
             @RequestBody @Valid ProjectRequestDTO projectRequestDTO
     ) {
-        return ResponseEntity.ok(srvWebsiteVersion.updateProject(ownerId, versionId, projectId, projectRequestDTO));
+        long expectedRevision = HttpEntityTag.requireRevision(ifMatch, "version", versionId);
+        return ResponseEntity.ok(srvWebsiteVersion.updateProject(ownerId, versionId, projectId, expectedRevision, projectRequestDTO));
     }
 
     @DeleteMapping("/{versionId}/projects/{projectId}")
     public ResponseEntity<Void> deleteProject(
             @PathVariable Long ownerId,
             @PathVariable Long versionId,
-            @PathVariable Long projectId
+            @PathVariable Long projectId,
+            @RequestHeader(value = "If-Match", required = false) String ifMatch
     ) {
-        srvWebsiteVersion.deleteProject(ownerId, versionId, projectId);
+        long expectedRevision = HttpEntityTag.requireRevision(ifMatch, "version", versionId);
+        srvWebsiteVersion.deleteProject(ownerId, versionId, projectId, expectedRevision);
         return ResponseEntity.noContent().build();
     }
 }

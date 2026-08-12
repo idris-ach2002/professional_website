@@ -27,6 +27,11 @@ public class Owner {
     @Column(name = "owner_id")
     private Long ownerId;
 
+    @Version
+    @Column(name = "row_version", nullable = false)
+    @Builder.Default
+    private long rowVersion = 0L;
+
     @Column(length = 256, nullable = false)
     private String name;
 

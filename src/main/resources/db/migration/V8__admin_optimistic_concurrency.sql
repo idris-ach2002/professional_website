@@ -1,0 +1,5 @@
+ALTER TABLE app_owner
+    ADD COLUMN IF NOT EXISTS row_version BIGINT NOT NULL DEFAULT 0;
+
+ALTER TABLE website_version
+    ADD COLUMN IF NOT EXISTS content_revision BIGINT NOT NULL DEFAULT 0;

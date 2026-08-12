@@ -5,6 +5,7 @@ import java.util.List;
 
 public record WebsiteVersionResponseDTO(
         Long id,
+        long contentRevision,
         String versionTag,
         String label,
         String description,

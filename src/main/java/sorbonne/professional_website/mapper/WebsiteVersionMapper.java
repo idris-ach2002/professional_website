@@ -23,6 +23,7 @@ public final class WebsiteVersionMapper {
 
         return new WebsiteVersionResponseDTO(
                 version.getId(),
+                version.getContentRevision(),
                 version.getVersionTag(),
                 version.getLabel(),
                 version.getDescription(),
@@ -43,6 +44,7 @@ public final class WebsiteVersionMapper {
 
         return new WebsiteVersionSummaryResponseDTO(
                 version.getId(),
+                version.getContentRevision(),
                 version.getVersionTag(),
                 version.getLabel(),
                 version.getDescription(),

@@ -1,7 +1,5 @@
 package sorbonne.professional_website.service;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.persistence.EntityNotFoundException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -13,17 +11,15 @@ import sorbonne.professional_website.dto.request.TimelineRequestDTO;
 import sorbonne.professional_website.dto.request.WebsiteVersionRequestDTO;
 import sorbonne.professional_website.dto.response.ProjectResponseDTO;
 import sorbonne.professional_website.dto.response.PortfolioBackupResponseDTO;
-import sorbonne.professional_website.dto.response.PortfolioHealthCheckResponseDTO;
 import sorbonne.professional_website.dto.response.PortfolioHealthReportResponseDTO;
 import sorbonne.professional_website.dto.response.WebsiteVersionResponseDTO;
-import sorbonne.professional_website.entity.Experience;
-import sorbonne.professional_website.entity.ContactInfo;
 import sorbonne.professional_website.entity.Owner;
 import sorbonne.professional_website.entity.Profile;
 import sorbonne.professional_website.entity.Project;
 import sorbonne.professional_website.entity.Timeline;
 import sorbonne.professional_website.entity.WebsiteVersion;
 import sorbonne.professional_website.exception.ResourceNotFoundException;
+import sorbonne.professional_website.exception.PreconditionFailedException;
 import sorbonne.professional_website.mapper.ProfileMapper;
 import sorbonne.professional_website.mapper.ProjectMapper;
 import sorbonne.professional_website.mapper.TimelineMapper;
@@ -34,17 +30,8 @@ import sorbonne.professional_website.repository.OwnerRepository;
 import sorbonne.professional_website.repository.ProjectRepository;
 import sorbonne.professional_website.repository.WebsiteVersionRepository;
 
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.zip.ZipEntry;
-import java.util.zip.ZipOutputStream;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 @Service
@@ -55,23 +42,29 @@ public class WebsiteVersionService {
     private final WebsiteVersionRepository rpWebsiteVersion;
     private final ProjectRepository rpProject;
     private final StorageService storageService;
-    private final ObjectMapper objectMapper;
     private final PortfolioChangePublisher changePublisher;
+    private final PortfolioHealthEvaluator healthEvaluator;
+    private final PortfolioBackupCodec backupCodec;
+    private final WebsiteVersionCloner versionCloner;
 
     public WebsiteVersionService(
             OwnerRepository rpOwner,
             WebsiteVersionRepository rpWebsiteVersion,
             ProjectRepository rpProject,
             StorageService storageService,
-            ObjectMapper objectMapper,
-            PortfolioChangePublisher changePublisher
+            PortfolioChangePublisher changePublisher,
+            PortfolioHealthEvaluator healthEvaluator,
+            PortfolioBackupCodec backupCodec,
+            WebsiteVersionCloner versionCloner
     ) {
         this.rpOwner = rpOwner;
         this.rpWebsiteVersion = rpWebsiteVersion;
         this.rpProject = rpProject;
         this.storageService = storageService;
-        this.objectMapper = objectMapper;
         this.changePublisher = changePublisher;
+        this.healthEvaluator = healthEvaluator;
+        this.backupCodec = backupCodec;
+        this.versionCloner = versionCloner;
     }
 
     @Transactional(readOnly = true)
@@ -159,9 +152,9 @@ public class WebsiteVersionService {
                 .owner(owner)
                 .build();
 
-        copiedVersion.attachProfile(copyProfile(sourceVersion.getProfile()));
-        copiedVersion.attachTimeline(copyTimeline(sourceVersion.getTimeline()));
-        copiedVersion.clearAndAttachProjects(copyProjects(sourceVersion.getProjects()));
+        copiedVersion.attachProfile(versionCloner.copyProfile(sourceVersion.getProfile()));
+        copiedVersion.attachTimeline(versionCloner.copyTimeline(sourceVersion.getTimeline()));
+        copiedVersion.clearAndAttachProjects(versionCloner.copyProjects(sourceVersion.getProjects()));
 
 
         WebsiteVersion savedVersion = rpWebsiteVersion.save(copiedVersion);
@@ -169,10 +162,11 @@ public class WebsiteVersionService {
         return WebsiteVersionMapper.toResponse(savedVersion);
     }
 
-    public WebsiteVersionResponseDTO updateVersion(Long ownerId, Long versionId, WebsiteVersionRequestDTO versionDTO) {
+    public WebsiteVersionResponseDTO updateVersion(Long ownerId, Long versionId, long expectedRevision, WebsiteVersionRequestDTO versionDTO) {
         lockOwner(ownerId);
 
         WebsiteVersion version = findVersionByOwner(ownerId, versionId);
+        requireContentRevision(version, expectedRevision);
         WebsiteVersionMapper.updateEntityFromRequest(version, versionDTO);
 
         if (version.getVersionTag() == null || version.getVersionTag().isBlank()) {
@@ -184,19 +178,24 @@ public class WebsiteVersionService {
         }
 
         if (versionDTO != null && Boolean.TRUE.equals(versionDTO.active())) {
-            return activateVersion(ownerId, versionId);
+            return activateLocked(ownerId, version);
         }
 
-        WebsiteVersion savedVersion = rpWebsiteVersion.save(version);
+        version.bumpContentRevision();
+        WebsiteVersion savedVersion = rpWebsiteVersion.saveAndFlush(version);
         changePublisher.changed(ownerId, "version-updated");
         return WebsiteVersionMapper.toResponse(savedVersion);
     }
 
-    public WebsiteVersionResponseDTO activateVersion(Long ownerId, Long versionId) {
+    public WebsiteVersionResponseDTO activateVersion(Long ownerId, Long versionId, long expectedRevision) {
         lockOwner(ownerId);
-
         WebsiteVersion version = findVersionByOwner(ownerId, versionId);
+        requireContentRevision(version, expectedRevision);
+        return activateLocked(ownerId, version);
+    }
 
+    private WebsiteVersionResponseDTO activateLocked(Long ownerId, WebsiteVersion version) {
+        Long versionId = version.getId();
         // Do not bulk-update the managed target itself: JPQL bulk updates bypass
         // the persistence context and could otherwise leave an already-active
         // target stale in memory while the database row becomes inactive.
@@ -204,6 +203,7 @@ public class WebsiteVersionService {
 
         version.setActive(true);
         version.setPublished(true);
+        version.bumpContentRevision();
 
         WebsiteVersion savedVersion = rpWebsiteVersion.saveAndFlush(version);
         changePublisher.changed(ownerId, "version-activated");
@@ -213,14 +213,18 @@ public class WebsiteVersionService {
     public WebsiteVersionResponseDTO createOrReplaceProfile(
             Long ownerId,
             Long versionId,
+            long expectedRevision,
             ProfileRequestDTO profileRequestDTO
     ) {
+        lockOwner(ownerId);
         WebsiteVersion version = findVersionByOwner(ownerId, versionId);
+        requireContentRevision(version, expectedRevision);
 
         Profile profile = ProfileMapper.fromRequest(profileRequestDTO);
         version.attachProfile(profile);
+        version.bumpContentRevision();
 
-        WebsiteVersion savedVersion = rpWebsiteVersion.save(version);
+        WebsiteVersion savedVersion = rpWebsiteVersion.saveAndFlush(version);
         changePublisher.changed(ownerId, "profile-updated");
         return WebsiteVersionMapper.toResponse(savedVersion);
     }
@@ -228,14 +232,18 @@ public class WebsiteVersionService {
     public WebsiteVersionResponseDTO createOrReplaceTimeline(
             Long ownerId,
             Long versionId,
+            long expectedRevision,
             TimelineRequestDTO timelineRequestDTO
     ) {
+        lockOwner(ownerId);
         WebsiteVersion version = findVersionByOwner(ownerId, versionId);
+        requireContentRevision(version, expectedRevision);
 
         Timeline timeline = TimelineMapper.fromRequest(timelineRequestDTO);
         version.attachTimeline(timeline);
+        version.bumpContentRevision();
 
-        WebsiteVersion savedVersion = rpWebsiteVersion.save(version);
+        WebsiteVersion savedVersion = rpWebsiteVersion.saveAndFlush(version);
         changePublisher.changed(ownerId, "timeline-updated");
         return WebsiteVersionMapper.toResponse(savedVersion);
     }
@@ -243,14 +251,19 @@ public class WebsiteVersionService {
     public WebsiteVersionResponseDTO addProject(
             Long ownerId,
             Long versionId,
+            long expectedRevision,
             ProjectRequestDTO projectRequestDTO
     ) {
+        lockOwner(ownerId);
         WebsiteVersion version = findVersionByOwner(ownerId, versionId);
+        requireContentRevision(version, expectedRevision);
 
+        requireUniqueProjectSlug(versionId, null, projectRequestDTO);
         Project project = ProjectMapper.fromRequest(projectRequestDTO);
         version.addProject(project);
+        version.bumpContentRevision();
 
-        WebsiteVersion savedVersion = rpWebsiteVersion.save(version);
+        WebsiteVersion savedVersion = rpWebsiteVersion.saveAndFlush(version);
         changePublisher.changed(ownerId, "project-added");
         return WebsiteVersionMapper.toResponse(savedVersion);
     }
@@ -275,33 +288,42 @@ public class WebsiteVersionService {
             Long ownerId,
             Long versionId,
             Long projectId,
+            long expectedRevision,
             ProjectRequestDTO projectRequestDTO
     ) {
         lockOwner(ownerId);
-        findVersionByOwner(ownerId, versionId);
+        WebsiteVersion version = findVersionByOwner(ownerId, versionId);
+        requireContentRevision(version, expectedRevision);
 
         Project project = findProjectByVersion(versionId, projectId);
+        requireUniqueProjectSlug(versionId, projectId, projectRequestDTO);
         ProjectMapper.updateEntityFromRequest(project, projectRequestDTO);
 
         Project savedProject = rpProject.save(project);
+        version.bumpContentRevision();
+        rpWebsiteVersion.saveAndFlush(version);
         changePublisher.changed(ownerId, "project-updated");
         return ProjectMapper.toResponse(savedProject);
     }
 
-    public void deleteProject(Long ownerId, Long versionId, Long projectId) {
+    public void deleteProject(Long ownerId, Long versionId, Long projectId, long expectedRevision) {
         lockOwner(ownerId);
         WebsiteVersion version = findVersionByOwner(ownerId, versionId);
+        requireContentRevision(version, expectedRevision);
         Project project = findProjectByVersion(versionId, projectId);
 
         version.getProjects().remove(project);
         rpProject.delete(project);
+        version.bumpContentRevision();
+        rpWebsiteVersion.saveAndFlush(version);
         changePublisher.changed(ownerId, "project-deleted");
     }
 
-    public void deleteVersion(Long ownerId, Long versionId) {
+    public void deleteVersion(Long ownerId, Long versionId, long expectedRevision) {
         lockOwner(ownerId);
 
         WebsiteVersion version = findVersionByOwner(ownerId, versionId);
+        requireContentRevision(version, expectedRevision);
 
         if (Boolean.TRUE.equals(version.getActive())) {
             throw new IllegalStateException("Impossible de supprimer la version active. Activez une autre version avant suppression.");
@@ -315,31 +337,33 @@ public class WebsiteVersionService {
     @Transactional(readOnly = true)
     public PortfolioHealthReportResponseDTO getHealthReport(Long ownerId, Long versionId) {
         WebsiteVersion version = findVersionByOwner(ownerId, versionId);
-        return buildHealthReport(ownerId, versionId, version);
+        return healthEvaluator.evaluate(ownerId, versionId, version);
     }
 
     @Transactional(readOnly = true)
     public PortfolioHealthReportResponseDTO validateBeforePublish(Long ownerId, Long versionId) {
         WebsiteVersion version = findVersionByOwner(ownerId, versionId);
-        return buildHealthReport(ownerId, versionId, version);
+        return healthEvaluator.evaluate(ownerId, versionId, version);
     }
 
-    public WebsiteVersionResponseDTO activateVersionAfterValidation(Long ownerId, Long versionId) {
+    public WebsiteVersionResponseDTO activateVersionAfterValidation(Long ownerId, Long versionId, long expectedRevision) {
         lockOwner(ownerId);
         WebsiteVersion version = findVersionByOwner(ownerId, versionId);
-        PortfolioHealthReportResponseDTO report = buildHealthReport(ownerId, versionId, version);
+        requireContentRevision(version, expectedRevision);
+        PortfolioHealthReportResponseDTO report = healthEvaluator.evaluate(ownerId, versionId, version);
         if (!report.publishable()) {
             throw new IllegalStateException("Publication bloquée : corrige les erreurs critiques avant activation.");
         }
-        return activateVersion(ownerId, versionId);
+        return activateLocked(ownerId, version);
     }
 
     @Transactional(readOnly = true)
     public PortfolioBackupResponseDTO exportVersionBackup(Long ownerId, Long versionId) {
         WebsiteVersion version = findVersionByOwner(ownerId, versionId);
-        String filename = buildBackupFilename(version);
-        String json = buildBackupJson(ownerId, version);
-        byte[] zipBytes = buildBackupZip(json, version);
+        PortfolioBackupCodec.BackupArtifact artifact = backupCodec.encode(ownerId, version);
+        String filename = artifact.filename();
+        String json = artifact.json();
+        byte[] zipBytes = artifact.zipBytes();
         StoredFile storedFile = storageService.storeBytes(filename, zipBytes);
         return new PortfolioBackupResponseDTO(
                 true,
@@ -360,7 +384,7 @@ public class WebsiteVersionService {
 
         WebsiteVersionRequestDTO restoredRequest = requestDTO.version();
         if (restoredRequest == null && requestDTO.backupJson() != null && !requestDTO.backupJson().isBlank()) {
-            restoredRequest = readVersionRequestFromBackupJson(requestDTO.backupJson());
+            restoredRequest = backupCodec.decodeVersionRequest(requestDTO.backupJson());
         }
 
         if (restoredRequest == null) {
@@ -382,231 +406,6 @@ public class WebsiteVersionService {
         return createVersion(ownerId, finalRequest);
     }
 
-    private PortfolioHealthReportResponseDTO buildHealthReport(Long ownerId, Long versionId, WebsiteVersion version) {
-        List<PortfolioHealthCheckResponseDTO> checks = new ArrayList<>();
-
-        Profile profile = version.getProfile();
-        Timeline timeline = version.getTimeline();
-        List<Project> versionProjects = version.getProjects() == null ? List.of() : version.getProjects();
-        List<Experience> versionExperiences = timeline == null || timeline.getExperiences() == null ? List.of() : timeline.getExperiences();
-        Owner owner = version.getOwner();
-
-        addCheck(checks, "profile.title", "Titre du profil", "BLOCKER", !isBlank(profile == null ? null : profile.getTitle()), "Le profil doit avoir un titre public.");
-        addCheck(checks, "profile.description", "Description du profil", "BLOCKER", !isBlank(profile == null ? null : profile.getDescription()), "La description publique du profil est obligatoire.");
-        addCheck(checks, "profile.cv", "CV attaché", "WARNING", profile != null && !isBlank(profile.getCvUrl()), "Aucun CV n'est attaché à cette version.");
-        addCheck(checks, "timeline", "Timeline", "BLOCKER", timeline != null && !versionExperiences.isEmpty(), "La timeline doit contenir au moins une expérience ou formation.");
-        addCheck(checks, "projects.published", "Projets publiés", "BLOCKER", versionProjects.stream().anyMatch(project -> project.getPublished() == null || Boolean.TRUE.equals(project.getPublished())), "Au moins un projet publié est nécessaire.");
-        addCheck(checks, "projects.featured", "Projet mis en avant", "WARNING", versionProjects.stream().anyMatch(project -> Boolean.TRUE.equals(project.getFeatured())), "Aucun projet n'est marqué comme featured.");
-        addCheck(checks, "assets.profile", "Image profil", "SUGGESTION", profile != null && !isBlank(profile.getProfileImageUrl()), "Ajoute une image de profil pour un rendu public plus professionnel.");
-        addCheck(checks, "contacts.email", "Contact email", "BLOCKER", owner != null && hasContact(owner, "EMAIL"), "Ajoute un email dans les contacts owner.");
-        addCheck(checks, "contacts.github", "Lien GitHub", "WARNING", owner != null && hasContact(owner, "GITHUB"), "Ajoute un lien GitHub dans les contacts owner.");
-        addCheck(checks, "links.projects", "Liens projets", "SUGGESTION", versionProjects.stream().anyMatch(project -> !isBlank(project.getGithubUrl()) || !isBlank(project.getDocumentationUrl())), "Ajoute au moins un lien GitHub ou documentation sur les projets publiés.");
-        addCheck(checks, "version.published", "Version publiée", "WARNING", Boolean.TRUE.equals(version.getPublished()), "La version n'est pas marquée comme published.");
-        addCheck(checks, "version.active", "Version active", "SUGGESTION", Boolean.TRUE.equals(version.getActive()), "La version n'est pas active. Utilise la validation avant publication.");
-        addCheck(checks, "dates.experiences", "Dates expériences", "WARNING", versionExperiences.stream().allMatch(experience -> experience.getStartDate() != null), "Certaines expériences n'ont pas de date de début.");
-        addCheck(checks, "projects.images", "Images projets", "SUGGESTION", versionProjects.stream().filter(project -> project.getPublished() == null || Boolean.TRUE.equals(project.getPublished())).allMatch(project -> !isBlank(project.getImageUrl())), "Certains projets publiés n'ont pas d'image.");
-
-        long blockers = checks.stream().filter(check -> "BLOCKER".equals(check.severity()) && "FAIL".equals(check.status())).count();
-        long warnings = checks.stream().filter(check -> "WARNING".equals(check.severity()) && "FAIL".equals(check.status())).count();
-        long suggestions = checks.stream().filter(check -> "SUGGESTION".equals(check.severity()) && "FAIL".equals(check.status())).count();
-        int score = Math.max(0, 100 - (int) blockers * 30 - (int) warnings * 8 - (int) suggestions * 3);
-
-        return new PortfolioHealthReportResponseDTO(
-                score,
-                blockers == 0,
-                (int) blockers,
-                (int) warnings,
-                (int) suggestions,
-                checks,
-                LocalDateTime.now(),
-                ownerId,
-                versionId
-        );
-    }
-
-    private void addCheck(List<PortfolioHealthCheckResponseDTO> checks, String id, String label, String severity, boolean pass, String failureMessage) {
-        checks.add(new PortfolioHealthCheckResponseDTO(
-                id,
-                label,
-                severity,
-                pass ? "PASS" : "FAIL",
-                pass ? "OK" : failureMessage
-        ));
-    }
-
-    private boolean hasContact(Owner owner, String type) {
-        if (owner.getContacts() == null) {
-            return false;
-        }
-        return owner.getContacts().stream()
-                .filter(Objects::nonNull)
-                .anyMatch(contact -> contact.getType() != null && type.equals(contact.getType().name()) && !isBlank(contact.getValue()));
-    }
-
-    private String buildBackupJson(Long ownerId, WebsiteVersion version) {
-        try {
-            Map<String, Object> payload = new LinkedHashMap<>();
-            Owner owner = version.getOwner();
-            WebsiteVersionRequestDTO versionRequest = toVersionRequest(version);
-            payload.put("format", "portfolio-backup-v1");
-            payload.put("generatedAt", LocalDateTime.now().toString());
-            payload.put("ownerId", ownerId);
-            payload.put("sourceVersionId", version.getId());
-            payload.put("owner", toOwnerBackupMap(owner));
-            payload.put("versionRequest", versionRequest);
-            payload.put("exportedVersion", WebsiteVersionMapper.toResponse(version));
-            payload.put("health", buildHealthReport(ownerId, version.getId(), version));
-            return objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(payload);
-        } catch (IOException exception) {
-            throw new IllegalStateException("Impossible de sérialiser le backup portfolio.", exception);
-        }
-    }
-
-    private Map<String, Object> toOwnerBackupMap(Owner owner) {
-        Map<String, Object> map = new LinkedHashMap<>();
-        if (owner == null) {
-            return map;
-        }
-        map.put("name", owner.getName());
-        map.put("firstName", owner.getFirstName());
-        map.put("age", owner.getAge());
-        map.put("active", owner.getActive());
-        map.put("address", owner.getAddress());
-        map.put("contacts", owner.getContacts() == null ? List.of() : owner.getContacts().stream().map(this::toContactMap).toList());
-        return map;
-    }
-
-    private Map<String, Object> toContactMap(ContactInfo contact) {
-        Map<String, Object> map = new LinkedHashMap<>();
-        map.put("type", contact.getType() == null ? null : contact.getType().name());
-        map.put("value", contact.getValue());
-        return map;
-    }
-
-    private WebsiteVersionRequestDTO toVersionRequest(WebsiteVersion version) {
-        return new WebsiteVersionRequestDTO(
-                version.getVersionTag(),
-                version.getLabel(),
-                version.getDescription(),
-                false,
-                version.getPublished(),
-                toProfileRequest(version.getProfile()),
-                toTimelineRequest(version.getTimeline()),
-                version.getProjects() == null ? List.of() : version.getProjects().stream().map(this::toProjectRequest).toList()
-        );
-    }
-
-    private ProfileRequestDTO toProfileRequest(Profile profile) {
-        if (profile == null) {
-            return null;
-        }
-        return new ProfileRequestDTO(
-                profile.getTitle(),
-                profile.getSubtitle(),
-                profile.getHeadline(),
-                profile.getShortDescription(),
-                profile.getDescription(),
-                profile.getLocation(),
-                profile.getAvailability(),
-                profile.getProfileImageUrl(),
-                profile.getLogoUrl(),
-                profile.getCvUrl(),
-                profile.getPortfolioUrl()
-        );
-    }
-
-    private TimelineRequestDTO toTimelineRequest(Timeline timeline) {
-        if (timeline == null) {
-            return null;
-        }
-        return new TimelineRequestDTO(
-                timeline.getTitle(),
-                timeline.getDescription(),
-                timeline.getExperiences() == null ? List.of() : timeline.getExperiences().stream().map(this::toExperienceRequest).toList()
-        );
-    }
-
-    private sorbonne.professional_website.dto.request.ExperienceRequestDTO toExperienceRequest(Experience experience) {
-        return new sorbonne.professional_website.dto.request.ExperienceRequestDTO(
-                experience.getCategory(),
-                experience.getTitle(),
-                experience.getOrganization(),
-                experience.getLocation(),
-                experience.getSummary(),
-                experience.getDescription(),
-                experience.getStartDate(),
-                experience.getEndDate(),
-                experience.isCurrentPosition(),
-                experience.getImageUrl(),
-                experience.getWebsiteUrl(),
-                experience.getSkills(),
-                experience.getDisplayOrder()
-        );
-    }
-
-    private ProjectRequestDTO toProjectRequest(Project project) {
-        return new ProjectRequestDTO(
-                project.getTitle(),
-                project.getSubtitle(),
-                project.getShortDescription(),
-                project.getDescription(),
-                project.getStatus(),
-                project.getStartDate(),
-                project.getEndDate(),
-                project.getImageUrl(),
-                project.getDemoUrl(),
-                project.getGithubUrl(),
-                project.getDocumentationUrl(),
-                project.getStacks(),
-                project.getFeatures(),
-                project.getLinks() == null ? List.of() : project.getLinks().stream().map(link -> new sorbonne.professional_website.dto.request.ProjectLinkRequestDTO(link.getType(), link.getLabel(), link.getUrl())).toList(),
-                project.getFeatured(),
-                project.getPublished(),
-                project.getDisplayOrder(),
-                null
-        );
-    }
-
-    private WebsiteVersionRequestDTO readVersionRequestFromBackupJson(String backupJson) {
-        try {
-            JsonNode root = objectMapper.readTree(backupJson);
-            JsonNode versionRequestNode = root.get("versionRequest");
-            if (versionRequestNode != null && !versionRequestNode.isNull()) {
-                return objectMapper.treeToValue(versionRequestNode, WebsiteVersionRequestDTO.class);
-            }
-            return objectMapper.treeToValue(root, WebsiteVersionRequestDTO.class);
-        } catch (Exception exception) {
-            throw new IllegalArgumentException("Backup JSON illisible ou incompatible : " + exception.getMessage(), exception);
-        }
-    }
-
-    private byte[] buildBackupZip(String json, WebsiteVersion version) {
-        try (ByteArrayOutputStream buffer = new ByteArrayOutputStream(); ZipOutputStream zip = new ZipOutputStream(buffer, StandardCharsets.UTF_8)) {
-            writeZipEntry(zip, "portfolio.json", json.getBytes(StandardCharsets.UTF_8));
-            writeZipEntry(zip, "metadata.json", ("{\n"
-                    + "  \"format\": \"portfolio-backup-v1\",\n"
-                    + "  \"versionId\": " + version.getId() + ",\n"
-                    + "  \"versionTag\": \"" + escapeJson(version.getVersionTag()) + "\",\n"
-                    + "  \"label\": \"" + escapeJson(version.getLabel()) + "\"\n"
-                    + "}\n").getBytes(StandardCharsets.UTF_8));
-            zip.finish();
-            return buffer.toByteArray();
-        } catch (IOException exception) {
-            throw new IllegalStateException("Impossible de générer le ZIP de backup.", exception);
-        }
-    }
-
-    private void writeZipEntry(ZipOutputStream zip, String name, byte[] bytes) throws IOException {
-        zip.putNextEntry(new ZipEntry(name));
-        zip.write(bytes == null ? new byte[0] : bytes);
-        zip.closeEntry();
-    }
-
-    private String buildBackupFilename(WebsiteVersion version) {
-        String tag = defaultIfBlank(version.getVersionTag(), "version").toLowerCase().replaceAll("[^a-z0-9]+", "-").replaceAll("(^-|-$)", "");
-        return "portfolio-backup-" + defaultIfBlank(tag, "version") + ".zip";
-    }
-
     private String publicUrl(StoredFile storedFile) {
         if (storedFile.url() != null && !storedFile.url().isBlank()) {
             return storedFile.url();
@@ -622,12 +421,13 @@ public class WebsiteVersionService {
         }
     }
 
-    private String escapeJson(String value) {
-        return value == null ? "" : value.replace("\\", "\\\\").replace("\"", "\\\"");
-    }
-
-    private boolean isBlank(String value) {
-        return value == null || value.isBlank();
+    private static void requireContentRevision(WebsiteVersion version, long expectedRevision) {
+        if (version.getContentRevision() != expectedRevision) {
+            throw new PreconditionFailedException(
+                    "Version modifiée depuis votre dernière lecture (attendu=" + expectedRevision
+                            + ", courant=" + version.getContentRevision() + ")."
+            );
+        }
     }
 
     private Owner lockOwner(Long ownerId) {
@@ -646,117 +446,23 @@ public class WebsiteVersionService {
                 .orElseThrow(() -> new ResourceNotFoundException("WebsiteVersion"));
     }
 
+    private void requireUniqueProjectSlug(Long versionId, Long projectId, ProjectRequestDTO projectRequestDTO) {
+        String slug = ProjectMapper.normalizedSlug(projectRequestDTO);
+        if (slug.isBlank()) {
+            throw new IllegalArgumentException("Le slug du projet ne peut pas être vide.");
+        }
+        boolean exists = rpProject.findByWebsiteVersion_IdOrderByDisplayOrderAscStartDateDesc(versionId).stream()
+                .filter(project -> projectId == null || !projectId.equals(project.getId()))
+                .map(ProjectMapper::effectiveSlug)
+                .anyMatch(existingSlug -> slug.equalsIgnoreCase(existingSlug));
+        if (exists) {
+            throw new IllegalArgumentException("Ce slug de projet est déjà utilisé dans cette version.");
+        }
+    }
+
     private Project findProjectByVersion(Long versionId, Long projectId) {
         return rpProject.findByIdAndWebsiteVersion_Id(projectId, versionId)
                 .orElseThrow(() -> new ResourceNotFoundException("Project"));
-    }
-
-    private Profile copyProfile(Profile source) {
-        if (source == null) {
-            return null;
-        }
-
-        return Profile.builder()
-                .title(source.getTitle())
-                .subtitle(source.getSubtitle())
-                .headline(source.getHeadline())
-                .shortDescription(source.getShortDescription())
-                .description(source.getDescription())
-                .location(source.getLocation())
-                .availability(source.getAvailability())
-                .profileImageUrl(source.getProfileImageUrl())
-                .logoUrl(source.getLogoUrl())
-                .cvUrl(source.getCvUrl())
-                .portfolioUrl(source.getPortfolioUrl())
-                .build();
-    }
-
-    private Timeline copyTimeline(Timeline source) {
-        if (source == null) {
-            return null;
-        }
-
-        Timeline copiedTimeline = Timeline.builder()
-                .title(source.getTitle())
-                .description(source.getDescription())
-                .build();
-
-        if (source.getExperiences() != null) {
-            for (Experience sourceExperience : source.getExperiences()) {
-                Experience copiedExperience = Experience.builder()
-                        .category(sourceExperience.getCategory())
-                        .title(sourceExperience.getTitle())
-                        .organization(sourceExperience.getOrganization())
-                        .location(sourceExperience.getLocation())
-                        .summary(sourceExperience.getSummary())
-                        .description(sourceExperience.getDescription())
-                        .startDate(sourceExperience.getStartDate())
-                        .endDate(sourceExperience.getEndDate())
-                        .currentPosition(sourceExperience.isCurrentPosition())
-                        .imageUrl(sourceExperience.getImageUrl())
-                        .websiteUrl(sourceExperience.getWebsiteUrl())
-                        .skills(sourceExperience.getSkills() == null ? new ArrayList<>() : new ArrayList<>(sourceExperience.getSkills()))
-                        .displayOrder(sourceExperience.getDisplayOrder())
-                        .timeline(copiedTimeline)
-                        .build();
-
-                copiedTimeline.getExperiences().add(copiedExperience);
-            }
-        }
-
-        return copiedTimeline;
-    }
-
-    private List<Project> copyProjects(List<Project> sourceProjects) {
-        if (sourceProjects == null) {
-            return new ArrayList<>();
-        }
-
-        List<Project> copiedProjects = new ArrayList<>();
-
-        for (Project sourceProject : sourceProjects) {
-            Project copiedProject = Project.builder()
-                    .title(sourceProject.getTitle())
-                    .subtitle(sourceProject.getSubtitle())
-                    .shortDescription(sourceProject.getShortDescription())
-                    .description(sourceProject.getDescription())
-                    .status(sourceProject.getStatus())
-                    .startDate(sourceProject.getStartDate())
-                    .endDate(sourceProject.getEndDate())
-                    .imageUrl(sourceProject.getImageUrl())
-                    .demoUrl(sourceProject.getDemoUrl())
-                    .githubUrl(sourceProject.getGithubUrl())
-                    .documentationUrl(sourceProject.getDocumentationUrl())
-                    .stacks(sourceProject.getStacks() == null ? new ArrayList<>() : new ArrayList<>(sourceProject.getStacks()))
-                    .features(sourceProject.getFeatures() == null ? new ArrayList<>() : new ArrayList<>(sourceProject.getFeatures()))
-                    .links(copyProjectLinks(sourceProject.getLinks()))
-                    .featured(sourceProject.getFeatured())
-                    .published(sourceProject.getPublished())
-                    .displayOrder(sourceProject.getDisplayOrder())
-                    .build();
-
-            copiedProjects.add(copiedProject);
-        }
-
-        return copiedProjects;
-    }
-
-    private List<Project.ProjectLink> copyProjectLinks(List<Project.ProjectLink> sourceLinks) {
-        if (sourceLinks == null) {
-            return new ArrayList<>();
-        }
-
-        List<Project.ProjectLink> copiedLinks = new ArrayList<>();
-
-        for (Project.ProjectLink sourceLink : sourceLinks) {
-            copiedLinks.add(Project.ProjectLink.builder()
-                    .type(sourceLink.getType())
-                    .label(sourceLink.getLabel())
-                    .url(sourceLink.getUrl())
-                    .build());
-        }
-
-        return copiedLinks;
     }
 
     private String buildDefaultTag(Owner owner) {

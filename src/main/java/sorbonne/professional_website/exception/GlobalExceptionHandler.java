@@ -8,6 +8,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -131,6 +132,61 @@ public class GlobalExceptionHandler {
                 safeMessage(exception, "Fichier introuvable."),
                 request,
                 Map.of()
+        );
+    }
+
+
+    @ExceptionHandler(PreconditionRequiredException.class)
+    public ResponseEntity<ApiErrorResponse> handlePreconditionRequired(
+            PreconditionRequiredException exception,
+            HttpServletRequest request
+    ) {
+        return response(
+                HttpStatus.PRECONDITION_REQUIRED,
+                "PRECONDITION_REQUIRED",
+                safeMessage(exception, "Une précondition If-Match est requise."),
+                request,
+                Map.of()
+        );
+    }
+
+    @ExceptionHandler(PreconditionFailedException.class)
+    public ResponseEntity<ApiErrorResponse> handlePreconditionFailed(
+            PreconditionFailedException exception,
+            HttpServletRequest request
+    ) {
+        LOGGER.warn(
+                "Optimistic precondition failed requestId={} method={} path={}",
+                requestId(request),
+                request.getMethod(),
+                request.getRequestURI()
+        );
+        return response(
+                HttpStatus.PRECONDITION_FAILED,
+                "CONCURRENT_MODIFICATION",
+                safeMessage(exception, "La ressource a été modifiée depuis votre dernière lecture."),
+                request,
+                Map.of("reloadRequired", true)
+        );
+    }
+
+    @ExceptionHandler(ObjectOptimisticLockingFailureException.class)
+    public ResponseEntity<ApiErrorResponse> handleOptimisticLockFailure(
+            ObjectOptimisticLockingFailureException exception,
+            HttpServletRequest request
+    ) {
+        LOGGER.warn(
+                "Hibernate optimistic-lock conflict requestId={} method={} path={}",
+                requestId(request),
+                request.getMethod(),
+                request.getRequestURI()
+        );
+        return response(
+                HttpStatus.CONFLICT,
+                "OPTIMISTIC_LOCK_CONFLICT",
+                "Une modification concurrente a été détectée. Rechargez les données avant de réessayer.",
+                request,
+                Map.of("reloadRequired", true)
         );
     }
 

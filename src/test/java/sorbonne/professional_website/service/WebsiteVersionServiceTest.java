@@ -1,6 +1,5 @@
 package sorbonne.professional_website.service;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -30,8 +29,10 @@ class WebsiteVersionServiceTest {
     @Mock WebsiteVersionRepository versionRepository;
     @Mock ProjectRepository projectRepository;
     @Mock StorageService storageService;
-    @Mock ObjectMapper objectMapper;
     @Mock PortfolioChangePublisher changePublisher;
+    @Mock PortfolioHealthEvaluator healthEvaluator;
+    @Mock PortfolioBackupCodec backupCodec;
+    @Mock WebsiteVersionCloner versionCloner;
 
     private WebsiteVersionService service;
 
@@ -42,8 +43,10 @@ class WebsiteVersionServiceTest {
                 versionRepository,
                 projectRepository,
                 storageService,
-                objectMapper,
-                changePublisher
+                changePublisher,
+                healthEvaluator,
+                backupCodec,
+                versionCloner
         );
     }
 
@@ -73,7 +76,7 @@ class WebsiteVersionServiceTest {
         when(versionRepository.findByIdAndOwnerOwnerId(20L, 1L)).thenReturn(Optional.of(target));
         when(versionRepository.saveAndFlush(target)).thenReturn(target);
 
-        var result = service.activateVersion(1L, 20L);
+        var result = service.activateVersion(1L, 20L, 0L);
 
         assertThat(result.active()).isTrue();
         assertThat(result.published()).isTrue();
@@ -91,7 +94,7 @@ class WebsiteVersionServiceTest {
         when(versionRepository.findByIdAndOwnerOwnerId(20L, 1L)).thenReturn(Optional.of(target));
         when(versionRepository.saveAndFlush(target)).thenReturn(target);
 
-        var result = service.activateVersion(1L, 20L);
+        var result = service.activateVersion(1L, 20L, 0L);
 
         assertThat(result.active()).isTrue();
         verify(versionRepository).deactivateOthersByOwnerId(1L, 20L);
@@ -105,9 +108,47 @@ class WebsiteVersionServiceTest {
         when(ownerRepository.lockByOwnerId(1L)).thenReturn(Optional.of(owner));
         when(versionRepository.findByIdAndOwnerOwnerId(20L, 1L)).thenReturn(Optional.of(target));
 
-        assertThatThrownBy(() -> service.deleteVersion(1L, 20L))
+        assertThatThrownBy(() -> service.deleteVersion(1L, 20L, 0L))
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("version active");
+    }
+
+
+    @Test
+    void staleContentRevisionCannotOverwriteVersion() {
+        Owner owner = owner();
+        WebsiteVersion target = WebsiteVersion.builder()
+                .id(20L).contentRevision(3L).versionTag("v2").label("V2").active(false).published(false).owner(owner).build();
+        when(ownerRepository.lockByOwnerId(1L)).thenReturn(Optional.of(owner));
+        when(versionRepository.findByIdAndOwnerOwnerId(20L, 1L)).thenReturn(Optional.of(target));
+
+        WebsiteVersionRequestDTO request = new WebsiteVersionRequestDTO(
+                "v2", "Nouvelle étiquette", null, false, false, null, null, null
+        );
+
+        assertThatThrownBy(() -> service.updateVersion(1L, 20L, 2L, request))
+                .isInstanceOf(sorbonne.professional_website.exception.PreconditionFailedException.class)
+                .hasMessageContaining("attendu=2")
+                .hasMessageContaining("courant=3");
+    }
+
+    @Test
+    void successfulMutationBumpsContentRevisionExactlyOnce() {
+        Owner owner = owner();
+        WebsiteVersion target = WebsiteVersion.builder()
+                .id(20L).contentRevision(3L).versionTag("v2").label("V2").active(false).published(false).owner(owner).build();
+        when(ownerRepository.lockByOwnerId(1L)).thenReturn(Optional.of(owner));
+        when(versionRepository.findByIdAndOwnerOwnerId(20L, 1L)).thenReturn(Optional.of(target));
+        when(versionRepository.saveAndFlush(target)).thenReturn(target);
+
+        WebsiteVersionRequestDTO request = new WebsiteVersionRequestDTO(
+                "v2", "Nouvelle étiquette", null, false, false, null, null, null
+        );
+
+        var result = service.updateVersion(1L, 20L, 3L, request);
+
+        assertThat(result.contentRevision()).isEqualTo(4L);
+        assertThat(result.label()).isEqualTo("Nouvelle étiquette");
     }
 
     private static Owner owner() {

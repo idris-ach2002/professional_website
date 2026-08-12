@@ -16,6 +16,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -70,10 +71,58 @@ class WebsiteVersionConcurrencyIntegrationTest {
         assertThat(first.id()).isNotNull();
     }
 
+
+    @Test
+    void concurrentWritesFromSameRevisionAllowOnlyOneCommit() throws Exception {
+        var created = versionService.createVersion(ownerId, request("v1", true));
+        long initialRevision = created.contentRevision();
+        CountDownLatch start = new CountDownLatch(1);
+        AtomicInteger conflicts = new AtomicInteger();
+        ExecutorService pool = Executors.newFixedThreadPool(2);
+
+        try {
+            Future<?> first = pool.submit(() -> awaitAndUpdate(start, created.id(), initialRevision, "writer-a", conflicts));
+            Future<?> second = pool.submit(() -> awaitAndUpdate(start, created.id(), initialRevision, "writer-b", conflicts));
+            start.countDown();
+            first.get();
+            second.get();
+        } finally {
+            pool.shutdownNow();
+        }
+
+        var persisted = versionService.getVersion(ownerId, created.id());
+        assertThat(conflicts.get()).isEqualTo(1);
+        assertThat(persisted.contentRevision()).isEqualTo(initialRevision + 1);
+        assertThat(persisted.label()).isIn("writer-a", "writer-b");
+    }
+
+    private void awaitAndUpdate(
+            CountDownLatch start,
+            Long versionId,
+            long expectedRevision,
+            String label,
+            AtomicInteger conflicts
+    ) {
+        try {
+            start.await();
+            versionService.updateVersion(
+                    ownerId,
+                    versionId,
+                    expectedRevision,
+                    new WebsiteVersionRequestDTO("v1", label, null, false, true, null, null, null)
+            );
+        } catch (sorbonne.professional_website.exception.PreconditionFailedException expected) {
+            conflicts.incrementAndGet();
+        } catch (InterruptedException exception) {
+            Thread.currentThread().interrupt();
+            throw new IllegalStateException(exception);
+        }
+    }
+
     private void awaitAndActivate(CountDownLatch start, Long versionId) {
         try {
             start.await();
-            versionService.activateVersion(ownerId, versionId);
+            versionService.activateVersion(ownerId, versionId, 0L);
         } catch (InterruptedException exception) {
             Thread.currentThread().interrupt();
             throw new IllegalStateException(exception);

@@ -41,6 +41,10 @@ public class WebsiteVersion {
     @Builder.Default
     private long rowVersion = 0L;
 
+    @Column(name = "content_revision", nullable = false)
+    @Builder.Default
+    private long contentRevision = 0L;
+
     @Column(name = "version_tag", nullable = false, length = 80)
     private String versionTag;
 
@@ -87,6 +91,10 @@ public class WebsiteVersion {
     @BatchSize(size = 32)
     @Builder.Default
     private List<Project> projects = new ArrayList<>();
+
+    public void bumpContentRevision() {
+        this.contentRevision++;
+    }
 
     public void attachProfile(Profile profile) {
         this.profile = profile;

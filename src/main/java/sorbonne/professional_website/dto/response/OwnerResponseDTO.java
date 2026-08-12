@@ -4,6 +4,7 @@ import java.util.List;
 
 public record OwnerResponseDTO(
         Long ownerId,
+        long rowVersion,
         String name,
         String firstName,
         int age,

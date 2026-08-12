@@ -4,6 +4,7 @@ import java.time.LocalDateTime;
 
 public record WebsiteVersionSummaryResponseDTO(
         Long id,
+        long contentRevision,
         String versionTag,
         String label,
         String description,
