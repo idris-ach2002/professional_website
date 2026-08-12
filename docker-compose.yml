@@ -45,6 +45,12 @@ services:
     build: .
     container_name: portfolio-backend
     restart: unless-stopped
+    init: true
+    read_only: true
+    security_opt:
+      - no-new-privileges:true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=128m
     depends_on:
       postgres:
         condition: service_healthy

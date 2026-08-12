@@ -1,23 +1,29 @@
-FROM maven:3.9-eclipse-temurin-21 AS build
+FROM eclipse-temurin:21-jdk AS build
 
 WORKDIR /app
 
-COPY pom.xml .
+COPY .mvn .mvn
+COPY mvnw pom.xml ./
 COPY src ./src
 
-# Tests are executed by CI (clean verify); the production image only compiles/packages main sources.
-RUN mvn clean package -Dmaven.test.skip=true
+# Use the repository-pinned Maven Wrapper so Docker and GitHub compile with
+# the same Maven distribution. Tests run in CI; the runtime image packages main sources only.
+RUN chmod +x mvnw \
+    && ./mvnw --batch-mode --no-transfer-progress clean package -Dmaven.test.skip=true
 
 FROM eclipse-temurin:21-jre
 
 WORKDIR /app
 
-ENV LANG=C.UTF-8
-ENV LC_ALL=C.UTF-8
-ENV JAVA_OPTS="-XX:MaxRAMPercentage=75.0"
+ENV LANG=C.UTF-8 \
+    LC_ALL=C.UTF-8 \
+    JAVA_TOOL_OPTIONS="-XX:MaxRAMPercentage=75.0"
 
-COPY --from=build /app/target/*.jar app.jar
+RUN mkdir -p /app/uploads && chown -R 10001:10001 /app
+COPY --from=build --chown=10001:10001 /app/target/*.jar /app/app.jar
+
+USER 10001:10001
 
 EXPOSE 8080
 
-ENTRYPOINT ["sh", "-c", "java $JAVA_OPTS -jar app.jar"]
+ENTRYPOINT ["java", "-jar", "/app/app.jar"]

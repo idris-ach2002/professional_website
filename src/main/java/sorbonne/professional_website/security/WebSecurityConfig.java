@@ -127,12 +127,14 @@ class WebSecurityConfig {
                 "Origin",
                 "X-Requested-With",
                 "X-CSRF-TOKEN",
-                "X-Request-ID"
+                "X-Request-ID",
+                "If-Match"
         ));
 
         configuration.setExposedHeaders(List.of(
                 "Location",
-                "X-Request-ID"
+                "X-Request-ID",
+                "ETag"
         ));
 
         // Obligatoire car le front appelle l'API avec credentials: "include".
