@@ -55,7 +55,7 @@ Le code est organisé par responsabilités :
 
 ```txt
 src/main/java/sorbonne/professional_website/
-├── controller/          # API portfolio, owner, profile, timeline, projects, versions
+├── controller/          # API publique, identité owner, versions, analytics, traductions, uploads
 ├── dto/                 # DTO request / response
 ├── entity/              # entités JPA principales
 ├── repository/          # repositories Spring Data JPA
@@ -102,7 +102,7 @@ Owner
 | `Profile` | Présentation professionnelle : titre, sous-titre, description, image, logo, CV, URL du portfolio. |
 | `Timeline` | Bloc de parcours qui regroupe les expériences. |
 | `Experience` | Formation, stage, alternance, CDI, CDD ou autre expérience. |
-| `Project` | Projet publié ou non, avec statut, dates, image, URLs, stacks, fonctionnalités et liens typés. |
+| `Project` | Projet publié ou non, avec slug stable, statut, dates, médias, stacks, proof tags, case study structuré et liens typés. |
 | `JobApplication` | Candidature suivie dans l’admin : entreprise, poste, offre, statut, score, documents, notes. |
 
 ### Version active unique
@@ -147,11 +147,6 @@ WHERE active = true;
 | `GET` | `/manager/{ownerId}` | Lit un owner. |
 | `PUT` | `/manager/{ownerId}` | Met à jour un owner. |
 | `DELETE` | `/manager/{ownerId}` | Supprime un owner. |
-| `POST` | `/manager/{ownerId}/profile` | Crée ou remplace un profil. |
-| `PUT` | `/manager/{ownerId}/profile` | Met à jour un profil. |
-| `POST` | `/manager/{ownerId}/timeline` | Crée ou remplace une timeline. |
-| `PUT` | `/manager/{ownerId}/timeline` | Met à jour une timeline. |
-| `POST` | `/manager/{ownerId}/projects` | Ajoute un projet. |
 
 ### API versions
 
@@ -171,7 +166,33 @@ WHERE active = true;
 | `POST` | `/manager/{ownerId}/versions/{versionId}/backup/export` | Exporte une sauvegarde. |
 | `POST` | `/manager/{ownerId}/versions/backup/restore` | Restaure une sauvegarde. |
 
+
+### Concurrence optimiste de l’administration
+
+Les ressources administrateur existantes sont protégées de bout en bout contre les écrasements concurrents :
+
+1. `GET /manager/{ownerId}` et `GET /manager/{ownerId}/versions/{versionId}` exposent un `ETag` fort ;
+2. toute mutation d’une ressource existante doit renvoyer cet ETag dans `If-Match` ;
+3. une précondition absente retourne `428 PRECONDITION_REQUIRED` ;
+4. une révision périmée ou une balise visant une autre ressource retourne `412 CONCURRENT_MODIFICATION` ;
+5. un conflit Hibernate résiduel est normalisé en `409 OPTIMISTIC_LOCK_CONFLICT`.
+
+Les écritures de contenu passent uniquement par l’agrégat `WebsiteVersion`. Les anciens CRUD directs `projects/profile/timeline/experiences` ne constituent plus une seconde voie de mutation.
+
+```txt
+GET version → ETag "version-42-7"
+    ↓
+édition admin
+    ↓
+PUT version + If-Match: "version-42-7"
+    ├── révision toujours 7 → commit → révision 8
+    └── révision différente → 412, rechargement requis
+```
+
 ### API projets par version
+
+Le contrat projet administré est persistant de bout en bout : `slug`, `architectureUrl`, `proofTags`, `caseStudy` et le lien `ARCHITECTURE` sont conservés par PostgreSQL, les backups et le clonage de versions. Les petites listes du case study sont sérialisées dans la ligne projet afin de ne pas ajouter de collections JPA supplémentaires au chemin de lecture public.
+
 
 | Méthode | Route | Description |
 |---|---|---|
@@ -228,7 +249,7 @@ Le backend accepte uniquement les origines configurées :
 APP_CORS_ALLOWED_ORIGINS=http://localhost:5173,http://localhost:4173,https://professional-website-front.achabou02idris.workers.dev
 ```
 
-Les credentials sont autorisés, car le frontend utilise les cookies de session :
+Les credentials sont autorisés, car le frontend utilise les cookies de session. `If-Match` est autorisé en requête et `ETag` est exposé au navigateur pour le protocole de concurrence optimiste :
 
 ```java
 configuration.setAllowCredentials(true);
@@ -237,6 +258,14 @@ configuration.setAllowCredentials(true);
 ### Redirections frontend
 
 Après login, le backend redirige vers le frontend uniquement si l’origine est autorisée. Cela évite les redirections ouvertes vers des domaines non prévus.
+
+## Observabilité et exploitation
+
+Le backend expose `/actuator/health` et `/actuator/prometheus`. Les requêtes HTTP bénéficient des métriques Spring/Micrometer, avec histogramme de latence et objectifs de service à 100 ms, 250 ms, 500 ms, 1 s et 2 s. Les executors réellement utilisés exposent également leur activité, leur file d’attente ou leurs permits disponibles.
+
+Chaque requête reçoit un `X-Request-ID` sûr et cette valeur est placée dans le MDC ; le pattern de logs inclut donc le même identifiant pour corréler réponse HTTP, erreur métier et traitement asynchrone. Les conflits optimistes `412/409` sont journalisés sans exposer le contenu sensible de la requête.
+
+Les probes de santé Spring sont activées afin de distinguer liveness/readiness lorsque la plateforme de déploiement les exploite.
 
 ## Stockage fichiers
 
@@ -379,6 +408,17 @@ CLOUDINARY_API_KEY=...
 CLOUDINARY_API_SECRET=...
 CLOUDINARY_FOLDER=portfolio
 ```
+
+
+### Archive source sûre
+
+Pour partager le backend sans `.env`, historique Git, `target/`, sauvegardes de migration ou artefacts locaux :
+
+```bash
+./scripts/package-source.sh
+```
+
+Le contrôle `./scripts/check-repository-hygiene.sh` vérifie également que ces fichiers sensibles ou générés ne sont pas suivis par Git.
 
 ## Déploiement Render
 

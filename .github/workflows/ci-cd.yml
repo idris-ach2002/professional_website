@@ -17,7 +17,7 @@ concurrency:
 jobs:
   verify:
     name: Tests PostgreSQL et package
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 25
     steps:
       - name: Checkout
@@ -33,7 +33,13 @@ jobs:
       - name: Autoriser Maven Wrapper
         run: chmod +x mvnw
 
-      - name: Vérifier les contrats V22
+      - name: Vérifier l’hygiène du dépôt
+        run: ./scripts/check-repository-hygiene.sh
+
+      - name: Vérifier l’architecture backend
+        run: ./scripts/check-backend-architecture.sh
+
+      - name: Vérifier les contrats VPerf
         run: ./scripts/check-VPerf.sh
 
       - name: Vérifier le backend
@@ -62,7 +68,7 @@ jobs:
     name: Déploiement Render
     needs: verify
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     environment: production
     env:
       RENDER_DEPLOY_HOOK_URL: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
