@@ -38,7 +38,7 @@ class AdminSecurityIntegrationTest {
 
     @Test
     void publicWebsiteEndpointRemainsPublicAndUsesTheErrorContract() throws Exception {
-        mockMvc.perform(get("/website/default").header("X-Request-ID", "security-test-request"))
+        mockMvc.perform(get("/website/9223372036854775807").header("X-Request-ID", "security-test-request"))
                 .andExpect(status().isNotFound())
                 .andExpect(header().string("X-Request-ID", "security-test-request"))
                 .andExpect(jsonPath("$.code").value("RESOURCE_NOT_FOUND"))
