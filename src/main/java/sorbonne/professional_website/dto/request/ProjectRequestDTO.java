@@ -47,6 +47,13 @@ public record ProjectRequestDTO(
         @Size(max = 512, message = "L'URL de documentation ne doit pas dépasser 512 caractères.")
         String documentationUrl,
 
+        @URL(message = "L'URL d'architecture est invalide.")
+        @Size(max = 512, message = "L'URL d'architecture ne doit pas dépasser 512 caractères.")
+        String architectureUrl,
+
+        @Size(max = 100, message = "Le slug ne doit pas dépasser 100 caractères.")
+        String slug,
+
         List<@NotBlank(message = "Une technologie ne peut pas être vide.")
         @Size(max = 100, message = "Une technologie ne doit pas dépasser 100 caractères.")
                 String> stacks,
@@ -54,6 +61,13 @@ public record ProjectRequestDTO(
         List<@NotBlank(message = "Une fonctionnalité ne peut pas être vide.")
         @Size(max = 255, message = "Une fonctionnalité ne doit pas dépasser 255 caractères.")
                 String> features,
+
+        List<@NotBlank(message = "Un proof tag ne peut pas être vide.")
+        @Size(max = 100, message = "Un proof tag ne doit pas dépasser 100 caractères.")
+                String> proofTags,
+
+        @Valid
+        ProjectCaseStudyRequestDTO caseStudy,
 
         @Valid
         List<ProjectLinkRequestDTO> links,

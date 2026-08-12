@@ -18,12 +18,15 @@ public record ProjectResponseDTO(
         String demoUrl,
         String githubUrl,
         String documentationUrl,
+        String architectureUrl,
         List<String> stacks,
         List<String> features,
         List<ProjectLinkResponseDTO> links,
         Boolean featured,
         Boolean published,
         Integer displayOrder,
-        String slug
+        String slug,
+        List<String> proofTags,
+        ProjectCaseStudyResponseDTO caseStudy
 ) {
 }

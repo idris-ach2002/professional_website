@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import lombok.*;
 import sorbonne.professional_website.entity.enumerations.ProjectLinkType;
 import sorbonne.professional_website.entity.enumerations.ProjectStatus;
+import sorbonne.professional_website.persistence.StringListJsonConverter;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -64,6 +65,12 @@ public class Project {
     @Column(name = "documentation_url", length = 512)
     private String documentationUrl;
 
+    @Column(name = "architecture_url", length = 512)
+    private String architectureUrl;
+
+    @Column(name = "slug", length = 100)
+    private String slug;
+
     @ElementCollection(fetch = FetchType.LAZY)
     @BatchSize(size = 32)
     @CollectionTable(
@@ -83,6 +90,56 @@ public class Project {
     @Column(name = "feature", length = 255, nullable = false)
     @Builder.Default
     private List<String> features = new ArrayList<>();
+
+    @Convert(converter = StringListJsonConverter.class)
+    @Column(name = "proof_tags_json", columnDefinition = "TEXT", nullable = false)
+    @Builder.Default
+    private List<String> proofTags = new ArrayList<>();
+
+    @Column(name = "case_study_problem", columnDefinition = "TEXT")
+    private String caseStudyProblem;
+
+    @Column(name = "case_study_context", columnDefinition = "TEXT")
+    private String caseStudyContext;
+
+    @Column(name = "case_study_role", columnDefinition = "TEXT")
+    private String caseStudyRole;
+
+    @Column(name = "case_study_architecture", columnDefinition = "TEXT")
+    private String caseStudyArchitecture;
+
+    @Column(name = "case_study_next_steps", columnDefinition = "TEXT")
+    private String caseStudyNextSteps;
+
+    @Convert(converter = StringListJsonConverter.class)
+    @Column(name = "case_study_technical_choices_json", columnDefinition = "TEXT", nullable = false)
+    @Builder.Default
+    private List<String> caseStudyTechnicalChoices = new ArrayList<>();
+
+    @Convert(converter = StringListJsonConverter.class)
+    @Column(name = "case_study_challenges_json", columnDefinition = "TEXT", nullable = false)
+    @Builder.Default
+    private List<String> caseStudyChallenges = new ArrayList<>();
+
+    @Convert(converter = StringListJsonConverter.class)
+    @Column(name = "case_study_solutions_json", columnDefinition = "TEXT", nullable = false)
+    @Builder.Default
+    private List<String> caseStudySolutions = new ArrayList<>();
+
+    @Convert(converter = StringListJsonConverter.class)
+    @Column(name = "case_study_outcomes_json", columnDefinition = "TEXT", nullable = false)
+    @Builder.Default
+    private List<String> caseStudyOutcomes = new ArrayList<>();
+
+    @Convert(converter = StringListJsonConverter.class)
+    @Column(name = "case_study_results_json", columnDefinition = "TEXT", nullable = false)
+    @Builder.Default
+    private List<String> caseStudyResults = new ArrayList<>();
+
+    @Convert(converter = StringListJsonConverter.class)
+    @Column(name = "case_study_limits_json", columnDefinition = "TEXT", nullable = false)
+    @Builder.Default
+    private List<String> caseStudyLimits = new ArrayList<>();
 
     @ElementCollection(fetch = FetchType.LAZY)
     @BatchSize(size = 32)

@@ -15,10 +15,8 @@ import sorbonne.professional_website.mapper.ProjectMapper;
 import sorbonne.professional_website.repository.OwnerRepository;
 import sorbonne.professional_website.translation.service.PortfolioLocalizationService;
 
-import java.text.Normalizer;
 import java.time.Instant;
 import java.util.List;
-import java.util.Locale;
 
 @Service
 @Transactional(readOnly = true)
@@ -88,21 +86,12 @@ public class WebsiteService {
         return publicVersion.getProjects()
                 .stream()
                 .filter(project -> Boolean.TRUE.equals(project.getPublished()))
-                .filter(project -> slugify(project.getTitle()).equals(slugify(slug)))
+                .filter(project -> ProjectMapper.effectiveSlug(project).equals(ProjectMapper.slugifyValue(slug)))
                 .findFirst()
                 .orElseThrow(() -> new ResourceNotFoundException("Project"));
     }
 
     private ProjectResponseDTO localizeProject(Project project, String locale) {
         return localizationService.localizeProject(ProjectMapper.toResponse(project), locale);
-    }
-
-    private static String slugify(String value) {
-        if (value == null) return "";
-        return Normalizer.normalize(value, Normalizer.Form.NFD)
-                .replaceAll("\\p{M}", "")
-                .toLowerCase(Locale.ROOT)
-                .replaceAll("[^a-z0-9]+", "-")
-                .replaceAll("^-+|-+$", "");
     }
 }

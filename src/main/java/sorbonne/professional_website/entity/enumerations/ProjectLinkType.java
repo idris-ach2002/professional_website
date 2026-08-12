@@ -8,6 +8,7 @@ public enum ProjectLinkType {
     GITHUB("GitHub"),
     DEMO("Démo"),
     DOCUMENTATION("Documentation"),
+    ARCHITECTURE("Architecture"),
     FIGMA("Figma"),
     VIDEO("Vidéo"),
     ARTICLE("Article"),

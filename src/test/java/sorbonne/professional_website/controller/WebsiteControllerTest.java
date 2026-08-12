@@ -42,6 +42,7 @@ class WebsiteControllerTest {
     void defaultWebsiteIsPublicAndForwardsTheLocale() throws Exception {
         OwnerResponseDTO owner = new OwnerResponseDTO(
                 1L,
+                0L,
                 "ACHABOU",
                 "Idris",
                 24,
@@ -115,7 +116,7 @@ class WebsiteControllerTest {
 
     private static OwnerResponseDTO owner(String locale) {
         return new OwnerResponseDTO(
-                1L, "ACHABOU", "Idris", 24, true, "Paris",
+                1L, 0L, "ACHABOU", "Idris", 24, true, "Paris",
                 List.of(), null, null, List.of(), List.of(), locale, List.of()
         );
     }
