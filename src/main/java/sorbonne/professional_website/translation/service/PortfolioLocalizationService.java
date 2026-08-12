@@ -63,6 +63,7 @@ public class PortfolioLocalizationService {
 
         return new OwnerResponseDTO(
                 source.ownerId(),
+                source.rowVersion(),
                 source.name(),
                 source.firstName(),
                 source.age(),
@@ -107,13 +108,16 @@ public class PortfolioLocalizationService {
                 project.demoUrl(),
                 project.githubUrl(),
                 project.documentationUrl(),
+                project.architectureUrl(),
                 project.stacks(),
                 splitLines(fields.getOrDefault("features", joinLines(project.features()))),
                 project.links(),
                 project.featured(),
                 project.published(),
                 project.displayOrder(),
-                project.slug()
+                project.slug(),
+                project.proofTags(),
+                project.caseStudy()
         );
     }
 

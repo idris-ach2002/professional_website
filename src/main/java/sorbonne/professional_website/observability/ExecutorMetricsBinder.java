@@ -12,14 +12,10 @@ public class ExecutorMetricsBinder {
 
     public ExecutorMetricsBinder(
             MeterRegistry registry,
-            @Qualifier("cpuExecutor") ThreadPoolTaskExecutor cpu,
-            @Qualifier("ioExecutor") ThreadPoolTaskExecutor io,
             @Qualifier("maintenanceExecutor") ThreadPoolTaskExecutor maintenance,
             @Qualifier("virtualIoExecutor") BoundedVirtualThreadExecutor virtualIo
     ) {
-        bind(registry, "cpu", cpu);
-        bind(registry, "io", io);
-        bind(registry, "maintenance", maintenance);
+        bindMaintenance(registry, maintenance);
         Gauge.builder("portfolio.executor.virtual.active", virtualIo, BoundedVirtualThreadExecutor::activeCount)
                 .tag("pool", "virtual-io")
                 .register(registry);
@@ -28,20 +24,20 @@ public class ExecutorMetricsBinder {
                 .register(registry);
     }
 
-    private static void bind(MeterRegistry registry, String name, ThreadPoolTaskExecutor executor) {
+    private static void bindMaintenance(MeterRegistry registry, ThreadPoolTaskExecutor executor) {
         Gauge.builder("portfolio.executor.active", executor, ThreadPoolTaskExecutor::getActiveCount)
-                .tag("pool", name)
+                .tag("pool", "maintenance")
                 .register(registry);
         Gauge.builder("portfolio.executor.pool.size", executor, ThreadPoolTaskExecutor::getPoolSize)
-                .tag("pool", name)
+                .tag("pool", "maintenance")
                 .register(registry);
         Gauge.builder("portfolio.executor.queue.size", executor,
                         value -> value.getThreadPoolExecutor().getQueue().size())
-                .tag("pool", name)
+                .tag("pool", "maintenance")
                 .register(registry);
         Gauge.builder("portfolio.executor.queue.remaining", executor,
                         value -> value.getThreadPoolExecutor().getQueue().remainingCapacity())
-                .tag("pool", name)
+                .tag("pool", "maintenance")
                 .register(registry);
     }
 }

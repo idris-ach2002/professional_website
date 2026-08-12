@@ -79,13 +79,16 @@ class PortfolioLocalizationServiceTest {
                 null,
                 "https://github.com/example/project",
                 null,
+                null,
                 List.of("Java", "React"),
                 List.of("Fonction A", "Fonction B"),
                 List.of(),
                 true,
                 true,
                 1,
-                "projet-francais"
+                "projet-francais",
+                List.of("Java"),
+                null
         );
     }
 }
