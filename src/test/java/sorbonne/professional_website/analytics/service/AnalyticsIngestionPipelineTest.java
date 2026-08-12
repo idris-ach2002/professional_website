@@ -43,6 +43,28 @@ class AnalyticsIngestionPipelineTest {
     }
 
     @Test
+    void shutdownDrainsQueuedEventsSynchronouslyWhenAsyncExecutionWasRejected() {
+        AnalyticsBatchWriter writer = mock(AnalyticsBatchWriter.class);
+        Executor rejectingExecutor = command -> { throw new java.util.concurrent.RejectedExecutionException("busy"); };
+        AnalyticsIngestionPipeline pipeline = new AnalyticsIngestionPipeline(
+                properties(4, 2),
+                writer,
+                new SimpleMeterRegistry(),
+                rejectingExecutor
+        );
+
+        AnalyticsEvent first = AnalyticsEvent.builder().eventType("a").build();
+        AnalyticsEvent second = AnalyticsEvent.builder().eventType("b").build();
+        pipeline.offer(first);
+        pipeline.offer(second);
+
+        pipeline.shutdownFlush();
+
+        verify(writer).write(List.of(first, second));
+        assertThat(pipeline.queuedEvents()).isZero();
+    }
+
+    @Test
     void boundedQueueAppliesBackpressureInsteadOfGrowingWithoutLimit() {
         AnalyticsBatchWriter writer = mock(AnalyticsBatchWriter.class);
         Executor rejectingExecutor = command -> { throw new java.util.concurrent.RejectedExecutionException("busy"); };
@@ -62,8 +84,6 @@ class AnalyticsIngestionPipelineTest {
 
     private static BackendConcurrencyProperties properties(int queueCapacity, int batchSize) {
         return new BackendConcurrencyProperties(
-                2, 2, 8,
-                2, 2, 8,
                 8,
                 1, 1, 8,
                 queueCapacity, batchSize, 500

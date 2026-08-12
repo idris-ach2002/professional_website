@@ -16,6 +16,7 @@ import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.Executor;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.locks.ReentrantLock;
 
 /**
  * Bounded analytics pipeline. Request threads only normalize/hash/enqueue.
@@ -32,7 +33,7 @@ public class AnalyticsIngestionPipeline {
     private final AnalyticsBatchWriter writer;
     private final MeterRegistry meterRegistry;
     private final Executor maintenanceExecutor;
-    private final AtomicBoolean flushing = new AtomicBoolean(false);
+    private final ReentrantLock flushLock = new ReentrantLock();
     private final AtomicBoolean flushScheduled = new AtomicBoolean(false);
 
     public AnalyticsIngestionPipeline(
@@ -82,25 +83,29 @@ public class AnalyticsIngestionPipeline {
     }
 
     public void flush() {
-        if (queue.isEmpty() || !flushing.compareAndSet(false, true)) return;
+        if (queue.isEmpty() || !flushLock.tryLock()) return;
         try {
-            List<AnalyticsEvent> batch = new ArrayList<>(batchSize);
-            queue.drainTo(batch, batchSize);
-            if (batch.isEmpty()) return;
-            try {
-                writer.write(List.copyOf(batch));
-                meterRegistry.counter("portfolio.analytics.batch.success").increment(batch.size());
-            } catch (RuntimeException exception) {
-                meterRegistry.counter("portfolio.analytics.batch.failure").increment(batch.size());
-                // Best-effort requeue. Analytics is non-critical; never block shutdown
-                // or exhaust heap if PostgreSQL is unavailable.
-                for (AnalyticsEvent event : batch) {
-                    if (!queue.offer(event)) break;
-                }
-                log.warn("Analytics batch write failed; {} events were requeued when capacity allowed", batch.size(), exception);
-            }
+            flushOneBatch();
         } finally {
-            flushing.set(false);
+            flushLock.unlock();
+        }
+    }
+
+    private void flushOneBatch() {
+        List<AnalyticsEvent> batch = new ArrayList<>(batchSize);
+        queue.drainTo(batch, batchSize);
+        if (batch.isEmpty()) return;
+        try {
+            writer.write(List.copyOf(batch));
+            meterRegistry.counter("portfolio.analytics.batch.success").increment(batch.size());
+        } catch (RuntimeException exception) {
+            meterRegistry.counter("portfolio.analytics.batch.failure").increment(batch.size());
+            // Best-effort requeue. Analytics is non-critical; never exhaust heap
+            // if PostgreSQL is unavailable.
+            for (AnalyticsEvent event : batch) {
+                if (!queue.offer(event)) break;
+            }
+            log.warn("Analytics batch write failed; {} events were requeued when capacity allowed", batch.size(), exception);
         }
     }
 
@@ -110,6 +115,17 @@ public class AnalyticsIngestionPipeline {
 
     @PreDestroy
     void shutdownFlush() {
-        for (int attempt = 0; attempt < 4 && !queue.isEmpty(); attempt++) flush();
+        flushLock.lock();
+        try {
+            // Wait for an in-flight batch, then drain a bounded number of batches
+            // synchronously. A persistent database outage must not hang shutdown.
+            for (int attempt = 0; attempt < 4 && !queue.isEmpty(); attempt++) {
+                int before = queue.size();
+                flushOneBatch();
+                if (queue.size() >= before) break;
+            }
+        } finally {
+            flushLock.unlock();
+        }
     }
 }

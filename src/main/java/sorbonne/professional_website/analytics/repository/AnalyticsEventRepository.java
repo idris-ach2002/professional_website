@@ -3,6 +3,7 @@ package sorbonne.professional_website.analytics.repository;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.repository.query.Param;
 import sorbonne.professional_website.analytics.entity.AnalyticsEvent;
 
@@ -18,6 +19,10 @@ public interface AnalyticsEventRepository extends JpaRepository<AnalyticsEvent, 
             OffsetDateTime to,
             Pageable pageable
     );
+
+    @Modifying
+    @Query("delete from AnalyticsEvent event where event.createdAt < :cutoff")
+    int deleteOlderThan(@Param("cutoff") OffsetDateTime cutoff);
 
     @Query(value = """
         SELECT
