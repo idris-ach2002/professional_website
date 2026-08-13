@@ -52,4 +52,29 @@ class PortfolioHealthEvaluatorTest {
         assertThat(report.blockersCount()).isGreaterThanOrEqualTo(4);
         assertThat(report.checks()).anyMatch(check -> "profile.title".equals(check.id()) && "FAIL".equals(check.status()));
     }
+    @Test
+    void duplicatePublishedSlugsBlockPublication() {
+        ContactInfo email = new ContactInfo();
+        email.setType(Contact.EMAIL);
+        email.setValue("idris@example.test");
+        Owner owner = Owner.builder()
+                .ownerId(1L).name("ACHABOU").firstName("Idris").age(24).address("Paris")
+                .contacts(java.util.List.of(email)).build();
+        WebsiteVersion version = WebsiteVersion.builder()
+                .id(2L).owner(owner).versionTag("v1").label("Draft").build();
+        version.attachProfile(Profile.builder().title("Développeur").description("Portfolio").build());
+        Timeline timeline = Timeline.builder().title("Parcours").build();
+        timeline.getExperiences().add(Experience.builder().title("Stage").organization("LITIS")
+                .startDate(LocalDate.of(2025, 4, 1)).timeline(timeline).build());
+        version.attachTimeline(timeline);
+        version.addProject(Project.builder().title("Alpha").slug("same-slug").published(true).build());
+        version.addProject(Project.builder().title("Beta").slug("same-slug").published(true).build());
+
+        var report = evaluator.evaluate(1L, 2L, version);
+
+        assertThat(report.publishable()).isFalse();
+        assertThat(report.checks()).anyMatch(check ->
+                "projects.slugs".equals(check.id()) && "FAIL".equals(check.status()) && "BLOCKER".equals(check.severity()));
+    }
+
 }
