@@ -18,6 +18,7 @@ import sorbonne.professional_website.entity.Profile;
 import sorbonne.professional_website.entity.Project;
 import sorbonne.professional_website.entity.Timeline;
 import sorbonne.professional_website.entity.WebsiteVersion;
+import sorbonne.professional_website.publication.PublicationStatus;
 import sorbonne.professional_website.exception.ResourceNotFoundException;
 import sorbonne.professional_website.exception.PreconditionFailedException;
 import sorbonne.professional_website.mapper.ProfileMapper;
@@ -116,6 +117,10 @@ public class WebsiteVersionService {
         version.setDescription(versionDTO != null ? versionDTO.description() : null);
         version.setActive(shouldActivate);
         version.setPublished(versionDTO != null && versionDTO.published() != null ? versionDTO.published() : shouldActivate);
+        version.setPublicationStatus(Boolean.TRUE.equals(version.getPublished())
+                ? (shouldActivate ? PublicationStatus.PUBLISHED : PublicationStatus.READY)
+                : PublicationStatus.DRAFT);
+        if (version.getPublicationStatus() == PublicationStatus.PUBLISHED) version.setPublishedAt(LocalDateTime.now());
         version.setOwner(owner);
 
 
@@ -148,7 +153,8 @@ public class WebsiteVersionService {
                 .label(defaultIfBlank(versionDTO != null ? versionDTO.label() : null, sourceVersion.getLabel() + " — copie"))
                 .description(versionDTO != null ? versionDTO.description() : sourceVersion.getDescription())
                 .active(shouldActivate)
-                .published(versionDTO != null && versionDTO.published() != null ? versionDTO.published() : sourceVersion.getPublished())
+                .published(versionDTO != null && versionDTO.published() != null ? versionDTO.published() : false)
+                .publicationStatus(PublicationStatus.DRAFT)
                 .owner(owner)
                 .build();
 
@@ -168,6 +174,10 @@ public class WebsiteVersionService {
         WebsiteVersion version = findVersionByOwner(ownerId, versionId);
         requireContentRevision(version, expectedRevision);
         WebsiteVersionMapper.updateEntityFromRequest(version, versionDTO);
+        // Publication state is owned by PublicationService. Metadata/content edits cannot
+        // silently publish or unpublish a version through the legacy boolean field.
+        version.setPublished(version.getPublicationStatus() == PublicationStatus.PUBLISHED);
+        if (version.getPublicationStatus() != PublicationStatus.PUBLISHED) version.setActive(false);
 
         if (version.getVersionTag() == null || version.getVersionTag().isBlank()) {
             version.setVersionTag("v" + versionId);
@@ -203,6 +213,10 @@ public class WebsiteVersionService {
 
         version.setActive(true);
         version.setPublished(true);
+        version.setPublicationStatus(PublicationStatus.PUBLISHED);
+        version.setScheduledAt(null);
+        version.setPublishedAt(LocalDateTime.now());
+        version.setPublicationError(null);
         version.bumpContentRevision();
 
         WebsiteVersion savedVersion = rpWebsiteVersion.saveAndFlush(version);

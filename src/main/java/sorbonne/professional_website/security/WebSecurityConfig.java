@@ -128,7 +128,8 @@ class WebSecurityConfig {
                 "X-Requested-With",
                 "X-CSRF-TOKEN",
                 "X-Request-ID",
-                "If-Match"
+                "If-Match",
+                "Idempotency-Key"
         ));
 
         configuration.setExposedHeaders(List.of(

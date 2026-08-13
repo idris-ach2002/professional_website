@@ -36,6 +36,15 @@ public class PortfolioLocalizationService {
         return localizeSource(OwnerMapper.toPublicResponse(owner), requestedLocale);
     }
 
+    /**
+     * Localizes an already-built owner snapshot. Used by authenticated draft preview so
+     * preview can render a specific WebsiteVersion without changing the public active version.
+     */
+    public OwnerResponseDTO localizeSnapshot(OwnerResponseDTO source, String requestedLocale) {
+        if (source == null) return null;
+        return localizeSource(source, requestedLocale);
+    }
+
     private OwnerResponseDTO localizeSource(OwnerResponseDTO source, String requestedLocale) {
         String locale = localeNormalizer.normalize(requestedLocale);
 

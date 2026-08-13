@@ -43,6 +43,11 @@ public class PortfolioHealthEvaluator {
         addCheck(checks, "version.active", "Version active", "SUGGESTION", Boolean.TRUE.equals(version.getActive()), "La version n'est pas active. Utilise la validation avant publication.");
         addCheck(checks, "dates.experiences", "Dates expériences", "WARNING", experiences.stream().allMatch(experience -> experience.getStartDate() != null), "Certaines expériences n'ont pas de date de début.");
         addCheck(checks, "projects.images", "Images projets", "SUGGESTION", projects.stream().filter(project -> project.getPublished() == null || Boolean.TRUE.equals(project.getPublished())).allMatch(project -> !isBlank(project.getImageUrl())), "Certains projets publiés n'ont pas d'image.");
+        addCheck(checks, "version.label", "Libellé de version", "BLOCKER", !isBlank(version.getLabel()), "Le brouillon doit avoir un libellé avant publication.");
+        addCheck(checks, "projects.titles", "Titres projets", "BLOCKER", projects.stream().filter(project -> project.getPublished() == null || Boolean.TRUE.equals(project.getPublished())).allMatch(project -> !isBlank(project.getTitle())), "Tous les projets publiés doivent avoir un titre.");
+        addCheck(checks, "projects.slugs", "Slugs projets uniques", "BLOCKER", publishedProjectSlugsAreUnique(projects), "Deux projets publiés utilisent le même slug public.");
+        addCheck(checks, "projects.dates", "Dates projets", "WARNING", projects.stream().allMatch(project -> project.getStartDate() == null || project.getEndDate() == null || !project.getEndDate().isBefore(project.getStartDate())), "Un projet possède une date de fin antérieure à sa date de début.");
+        addCheck(checks, "experiences.content", "Contenu expériences", "WARNING", experiences.stream().allMatch(experience -> !isBlank(experience.getTitle()) && !isBlank(experience.getOrganization())), "Certaines expériences n'ont pas de titre ou d'organisation.");
 
         long blockers = countFailures(checks, "BLOCKER");
         long warnings = countFailures(checks, "WARNING");
@@ -72,6 +77,16 @@ public class PortfolioHealthEvaluator {
         checks.add(new PortfolioHealthCheckResponseDTO(
                 id, label, severity, pass ? "PASS" : "FAIL", pass ? "OK" : failureMessage
         ));
+    }
+
+
+    private static boolean publishedProjectSlugsAreUnique(List<Project> projects) {
+        java.util.Set<String> seen = new java.util.HashSet<>();
+        return projects.stream()
+                .filter(project -> project.getPublished() == null || Boolean.TRUE.equals(project.getPublished()))
+                .map(sorbonne.professional_website.mapper.ProjectMapper::effectiveSlug)
+                .filter(slug -> slug != null && !slug.isBlank())
+                .allMatch(seen::add);
     }
 
     private static boolean hasContact(Owner owner, String type) {

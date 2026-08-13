@@ -8,6 +8,8 @@ import sorbonne.professional_website.entity.WebsiteVersion;
 
 import java.util.List;
 import java.util.Optional;
+import java.time.LocalDateTime;
+import sorbonne.professional_website.publication.PublicationStatus;
 
 public interface WebsiteVersionRepository extends JpaRepository<WebsiteVersion, Long> {
 
@@ -18,6 +20,9 @@ public interface WebsiteVersionRepository extends JpaRepository<WebsiteVersion, 
     Optional<WebsiteVersion> findByOwnerOwnerIdAndActiveTrue(Long ownerId);
 
     Optional<WebsiteVersion> findByOwnerOwnerIdAndActiveTrueAndPublishedTrue(Long ownerId);
+
+    List<WebsiteVersion> findTop50ByPublicationStatusAndScheduledAtLessThanEqualOrderByScheduledAtAsc(
+            PublicationStatus publicationStatus, LocalDateTime now);
 
     boolean existsByOwnerOwnerIdAndActiveTrue(Long ownerId);
 

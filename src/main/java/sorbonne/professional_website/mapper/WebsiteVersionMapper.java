@@ -7,6 +7,7 @@ import sorbonne.professional_website.entity.Profile;
 import sorbonne.professional_website.entity.Project;
 import sorbonne.professional_website.entity.Timeline;
 import sorbonne.professional_website.entity.WebsiteVersion;
+import sorbonne.professional_website.publication.PublicationStatus;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -29,6 +30,10 @@ public final class WebsiteVersionMapper {
                 version.getDescription(),
                 version.getActive(),
                 version.getPublished(),
+                version.getPublicationStatus(),
+                sorbonne.professional_website.time.PlatformTime.asUtcOffset(version.getScheduledAt()),
+                sorbonne.professional_website.time.PlatformTime.asUtcOffset(version.getPublishedAt()),
+                version.getPublicationError(),
                 version.getCreatedAt(),
                 version.getUpdatedAt(),
                 ProfileMapper.toResponse(version.getProfile()),
@@ -50,6 +55,10 @@ public final class WebsiteVersionMapper {
                 version.getDescription(),
                 version.getActive(),
                 version.getPublished(),
+                version.getPublicationStatus(),
+                sorbonne.professional_website.time.PlatformTime.asUtcOffset(version.getScheduledAt()),
+                sorbonne.professional_website.time.PlatformTime.asUtcOffset(version.getPublishedAt()),
+                version.getPublicationError(),
                 version.getCreatedAt(),
                 version.getUpdatedAt()
         );
@@ -131,6 +140,8 @@ public final class WebsiteVersionMapper {
                 .description(versionDescription)
                 .active(true)
                 .published(versionPublished != null ? versionPublished : true)
+                .publicationStatus((versionPublished == null || Boolean.TRUE.equals(versionPublished)) ? PublicationStatus.PUBLISHED : PublicationStatus.DRAFT)
+                .publishedAt((versionPublished == null || Boolean.TRUE.equals(versionPublished)) ? java.time.LocalDateTime.now() : null)
                 .build();
 
         version.attachProfile(profile);

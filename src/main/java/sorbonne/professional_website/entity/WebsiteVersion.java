@@ -7,6 +7,7 @@ import org.hibernate.annotations.UpdateTimestamp;
 import org.hibernate.annotations.BatchSize;
 
 import java.time.LocalDateTime;
+import sorbonne.professional_website.publication.PublicationStatus;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -61,6 +62,20 @@ public class WebsiteVersion {
     @Column(nullable = false)
     @Builder.Default
     private Boolean published = false;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "publication_status", nullable = false, length = 24)
+    @Builder.Default
+    private PublicationStatus publicationStatus = PublicationStatus.DRAFT;
+
+    @Column(name = "scheduled_at")
+    private LocalDateTime scheduledAt;
+
+    @Column(name = "published_at")
+    private LocalDateTime publishedAt;
+
+    @Column(name = "publication_error", length = 2000)
+    private String publicationError;
 
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
