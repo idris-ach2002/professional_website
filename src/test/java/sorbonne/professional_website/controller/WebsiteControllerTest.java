@@ -61,6 +61,8 @@ class WebsiteControllerTest {
         mockMvc.perform(get("/website/default").param("locale", "en"))
                 .andExpect(status().isOk())
                 .andExpect(header().string("Cache-Control", "max-age=60, public"))
+                .andExpect(header().exists("Server-Timing"))
+                .andExpect(header().exists("X-Portfolio-Trace"))
                 .andExpect(jsonPath("$.ownerId").value(1))
                 .andExpect(jsonPath("$.locale").value("en"));
 

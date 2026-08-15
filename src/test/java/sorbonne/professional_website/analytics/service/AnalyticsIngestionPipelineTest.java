@@ -82,6 +82,32 @@ class AnalyticsIngestionPipelineTest {
         verify(writer, never()).write(org.mockito.ArgumentMatchers.anyList());
     }
 
+    @Test
+    void exposesBoundedCapacityAndPaginatedReadOnlySnapshot() {
+        AnalyticsBatchWriter writer = mock(AnalyticsBatchWriter.class);
+        Executor rejectingExecutor = command -> { throw new java.util.concurrent.RejectedExecutionException("busy"); };
+        AnalyticsIngestionPipeline pipeline = new AnalyticsIngestionPipeline(
+                properties(4, 4),
+                writer,
+                new SimpleMeterRegistry(),
+                rejectingExecutor
+        );
+
+        AnalyticsEvent first = AnalyticsEvent.builder().eventType("first").build();
+        AnalyticsEvent second = AnalyticsEvent.builder().eventType("second").build();
+        AnalyticsEvent third = AnalyticsEvent.builder().eventType("third").build();
+        pipeline.offer(first);
+        pipeline.offer(second);
+        pipeline.offer(third);
+
+        assertThat(pipeline.capacity()).isEqualTo(4);
+        assertThat(pipeline.remainingCapacity()).isEqualTo(1);
+        assertThat(pipeline.snapshotPage(0, 2)).containsExactly(first, second);
+        assertThat(pipeline.snapshotPage(1, 2)).containsExactly(third);
+        assertThat(pipeline.queuedEvents()).isEqualTo(3);
+        verify(writer, never()).write(org.mockito.ArgumentMatchers.anyList());
+    }
+
     private static BackendConcurrencyProperties properties(int queueCapacity, int batchSize) {
         return new BackendConcurrencyProperties(
                 8,

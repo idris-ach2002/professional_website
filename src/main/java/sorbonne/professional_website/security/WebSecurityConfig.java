@@ -30,7 +30,10 @@ class WebSecurityConfig {
             FrontendRedirectService frontendRedirectService
     ) throws Exception {
         http
-                .csrf(csrf -> csrf.ignoringRequestMatchers("/analytics/events"))
+                .csrf(csrf -> csrf.ignoringRequestMatchers(
+                        "/analytics/events",
+                        "/api/engineering/performance/samples"
+                ))
                 .cors(cors -> cors.configurationSource(corsConfigurationSource))
                 .authorizeHttpRequests((requests) -> requests
                         .dispatcherTypeMatchers(DispatcherType.ERROR, DispatcherType.FORWARD).permitAll()
@@ -52,6 +55,8 @@ class WebSecurityConfig {
 
                         // Public portfolio read endpoints used by the front-office.
                         .requestMatchers(HttpMethod.POST, "/analytics/events").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/engineering/**").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/engineering/performance/samples").permitAll()
                         .requestMatchers(HttpMethod.GET, "/website").permitAll()
                         .requestMatchers(HttpMethod.GET, "/website/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/uploads/files/**").permitAll()
@@ -135,7 +140,10 @@ class WebSecurityConfig {
         configuration.setExposedHeaders(List.of(
                 "Location",
                 "X-Request-ID",
-                "ETag"
+                "ETag",
+                "Server-Timing",
+                "X-Portfolio-Trace",
+                "X-Portfolio-Cache"
         ));
 
         // Obligatoire car le front appelle l'API avec credentials: "include".

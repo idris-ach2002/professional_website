@@ -1,6 +1,8 @@
 package sorbonne.professional_website.jobs;
 
 import jakarta.persistence.LockModeType;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
@@ -11,6 +13,8 @@ import java.util.List;
 import java.util.Optional;
 
 public interface BackgroundJobRepository extends JpaRepository<BackgroundJob, String> {
+    long countByStatus(BackgroundJobStatus status);
+    Page<BackgroundJob> findByStatusIn(List<BackgroundJobStatus> statuses, Pageable pageable);
     List<BackgroundJob> findTop100ByOwnerIdOrderByCreatedAtDesc(Long ownerId);
     List<BackgroundJob> findTop50ByTypeAndStatusInAndExecuteAfterLessThanEqualOrderByPriorityDescExecuteAfterAsc(
             BackgroundJobType type, List<BackgroundJobStatus> statuses, LocalDateTime now);

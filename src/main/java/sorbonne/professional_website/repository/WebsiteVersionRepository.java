@@ -12,6 +12,7 @@ import java.time.LocalDateTime;
 import sorbonne.professional_website.publication.PublicationStatus;
 
 public interface WebsiteVersionRepository extends JpaRepository<WebsiteVersion, Long> {
+    long countByPublicationStatus(PublicationStatus publicationStatus);
 
     List<WebsiteVersion> findByOwnerOwnerIdOrderByCreatedAtDesc(Long ownerId);
 

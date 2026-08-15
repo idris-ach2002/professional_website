@@ -109,8 +109,23 @@ public class AnalyticsIngestionPipeline {
         }
     }
 
-    int queuedEvents() {
+    public int queuedEvents() {
         return queue.size();
+    }
+
+    public int capacity() {
+        return queue.size() + queue.remainingCapacity();
+    }
+
+    public int remainingCapacity() {
+        return queue.remainingCapacity();
+    }
+
+    public List<AnalyticsEvent> snapshotPage(int page, int size) {
+        int safePage = Math.max(0, page);
+        int safeSize = Math.max(1, Math.min(50, size));
+        long offset = (long) safePage * safeSize;
+        return queue.stream().skip(offset).limit(safeSize).toList();
     }
 
     @PreDestroy

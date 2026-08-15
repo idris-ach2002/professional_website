@@ -34,7 +34,21 @@ public class WebsiteController {
     public ResponseEntity<OwnerResponseDTO> getDefaultWebsite(
             @RequestParam(defaultValue = "fr") String locale
     ) {
-        return cached(srvWebsite.getFirstOwner(locale));
+        long startedAt = System.nanoTime();
+        OwnerResponseDTO body = srvWebsite.getFirstOwner(locale);
+        return ResponseEntity.ok()
+                .cacheControl(PUBLIC_CACHE)
+                .header("Server-Timing", "website;dur=" + elapsedMs(startedAt) + ";desc=\"WebsiteService.getFirstOwner\"")
+                .header("X-Portfolio-Trace", String.join(">",
+                        "Spring Security FilterChain",
+                        "DispatcherServlet",
+                        "WebsiteController",
+                        "CacheInterceptor",
+                        "Caffeine @Cacheable",
+                        "WebsiteService proxy",
+                        "Jackson"
+                ))
+                .body(body);
     }
 
     @GetMapping("/default/seo-snapshot")
@@ -65,6 +79,10 @@ public class WebsiteController {
             @RequestParam(defaultValue = "fr") String locale
     ) {
         return cached(srvWebsite.getProjectBySlug(ownerId, projectSlug, locale));
+    }
+
+    private static double elapsedMs(long startedAt) {
+        return Math.round(((System.nanoTime() - startedAt) / 1_000_000.0) * 100.0) / 100.0;
     }
 
     private static <T> ResponseEntity<T> cached(T body) {

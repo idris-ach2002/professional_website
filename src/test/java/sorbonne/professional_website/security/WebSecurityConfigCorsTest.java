@@ -19,7 +19,7 @@ class WebSecurityConfigCorsTest {
 
         assertThat(cors).isNotNull();
         assertThat(cors.getAllowedHeaders()).contains("If-Match", "Idempotency-Key");
-        assertThat(cors.getExposedHeaders()).contains("ETag");
+        assertThat(cors.getExposedHeaders()).contains("ETag", "Server-Timing", "X-Portfolio-Trace");
         assertThat(cors.getAllowedOrigins()).containsExactly("https://front.example.test");
         assertThat(cors.getAllowCredentials()).isTrue();
     }

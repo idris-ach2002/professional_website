@@ -1,6 +1,8 @@
 package sorbonne.professional_website.events;
 
 import jakarta.persistence.LockModeType;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
@@ -11,6 +13,9 @@ import java.util.List;
 import java.util.Optional;
 
 public interface OutboxEventRepository extends JpaRepository<OutboxEvent, String> {
+    long countByStatus(OutboxStatus status);
+    Page<OutboxEvent> findByStatusIn(List<OutboxStatus> statuses, Pageable pageable);
+    List<OutboxEvent> findTop20ByOrderByCreatedAtDesc();
     List<OutboxEvent> findTop100ByOwnerIdOrderByCreatedAtDesc(Long ownerId);
     Optional<OutboxEvent> findByEventKey(String eventKey);
     Optional<OutboxEvent> findByIdAndOwnerId(String id, Long ownerId);
