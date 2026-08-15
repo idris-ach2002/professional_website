@@ -29,7 +29,12 @@ for retired in \
   src/main/java/sorbonne/professional_website/service/ProjectService.java \
   src/main/java/sorbonne/professional_website/service/ProfileService.java \
   src/main/java/sorbonne/professional_website/service/TimelineService.java \
-  src/main/java/sorbonne/professional_website/service/ExperienceService.java; do
+  src/main/java/sorbonne/professional_website/service/ExperienceService.java \
+  src/main/java/sorbonne/professional_website/engineering/controller/PortfolioIntelligenceController.java \
+  src/main/java/sorbonne/professional_website/engineering/service/PortfolioIntelligenceService.java \
+  src/main/java/sorbonne/professional_website/engineering/dto/PortfolioIntelligenceQueryRequest.java \
+  src/main/java/sorbonne/professional_website/engineering/dto/PortfolioIntelligenceResponse.java \
+  src/test/java/sorbonne/professional_website/engineering/PortfolioIntelligenceServiceTest.java; do
   forbid_path "$retired"
 done
 
