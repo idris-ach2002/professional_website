@@ -1,321 +1,149 @@
-# Portfolio professionnel — full stack React / Spring Boot
+<div align="center">
 
-> Portfolio dynamique, administrable et versionné, composé d’un frontend React déployé sur Cloudflare Workers et d’un backend Spring Boot déployé sur Render avec Docker.
+# Professional Website · Backend
 
-[![Frontend](https://img.shields.io/badge/frontend-Cloudflare%20Workers-orange)](#déploiement)
-[![Backend](https://img.shields.io/badge/backend-Render%20Docker-purple)](#déploiement)
-[![Database](https://img.shields.io/badge/database-Aiven%20PostgreSQL-0ea5e9)](#déploiement)
-[![Storage](https://img.shields.io/badge/storage-Cloudinary-3448c5)](#déploiement)
-[![Java](https://img.shields.io/badge/Java-21-b07219)](#stack-technique)
-[![React](https://img.shields.io/badge/React-19-61dafb)](#stack-technique)
+**Spring Boot · PostgreSQL · Flyway · Spring Security · Caffeine · Cloudinary · Actuator**
 
-## Sommaire
+API publique et administrée, modèle métier, publication, persistence, sécurité, jobs, outbox, traduction, médias, analytics et observabilité.
 
-| Document | Rôle |
-|---|---|
-| [`README.md`](./README.md) | Vue d’ensemble du portfolio, architecture globale, lancement local, déploiement et liens entre les deux projets. |
-| [`README-BACKEND.md`](./README-BACKEND.md) | Documentation détaillée du backend Spring Boot : API, sécurité, modèle de données, stockage, traduction, Docker et variables d’environnement. |
-| [`README-FRONTEND.md`](./README-FRONTEND.md) | Documentation détaillée du frontend React : routes, composants, intégration API, admin panel, animations, build Vite, déploiement Cloudflare. |
+[Documentation Backend](documentation/src/content/docs/backend/architecture.md) · [Architecture globale](documentation/src/content/docs/overview/system-architecture.md) · [Front ↔ Back](documentation/src/content/docs/integration/front-back.md) · [Cloud](documentation/src/content/docs/cloud/topology.md) · [Déploiement](documentation/src/content/docs/deployment/full-release.md)
 
-## Vue d’ensemble
+</div>
 
-Ce portfolio est une application full stack structurée en deux projets indépendants :
+---
 
-- un **frontend React** qui affiche le portfolio public, le CV et une interface d’administration ;
-- un **backend Spring Boot** qui expose les API publiques et protégées, persiste les données dans PostgreSQL, gère les fichiers, les versions du site et les traductions persistées.
+## Atlas du système
 
-Le site n’est pas un portfolio statique. Il repose sur une donnée métier administrable : propriétaire du portfolio, profil, expériences, projets, versions de site, documents et traductions. Le frontend consomme l’API publique pour afficher la version publiée et consomme l’API protégée pour l’administration.
+<p align="center">
+  <img src="documentation/public/diagrams/system-atlas.svg" alt="Architecture complète du portfolio : navigateur, frontend, backend, données, cloud, CI/CD et exploitation" width="100%" />
+</p>
 
-## Liens de production
+Le dépôt backend porte la vérité métier du portfolio. Il expose les lectures publiques, protège l’administration, orchestre l’édition et la publication des snapshots de contenu, persiste les données relationnelles, traite les tâches différées et centralise les intégrations qui nécessitent des secrets serveur.
 
-| Service | URL / Provider |
-|---|---|
-| Portfolio public | `https://professional-website-front.achabou02idris.workers.dev` |
-| Frontend | Cloudflare Workers Assets |
-| Backend | Render, déploiement Docker |
-| Base de données | Aiven, PostgreSQL managé |
-| Stockage fichiers | Cloudinary |
-| Ping de maintien Render | `https://professional-website-hozo.onrender.com/actuator/health` via cron-job.org |
+**Dépôt complémentaire :** [professional_website_front — Frontend React](https://github.com/idris-ach2002/professional_website_front)
 
-## Architecture globale
+---
 
-```txt
-Navigateur
-   │
-   ▼
-Cloudflare Workers Assets
-Frontend React / Vite
-   │
-   │  HTTPS + credentials + CORS contrôlé
-   ▼
-Render
-Backend Spring Boot / Docker
-   │
-   ├── Aiven PostgreSQL
-   │      └── données relationnelles : owners, versions, profils, timelines, projets, analytics et traductions
-   │
-   ├── Cloudinary
-   │      └── fichiers publics ou administrés : images, PDF, CV, exports ZIP
-   │
-   └── Actuator health
-          └── route de ping cron-job.org pour limiter la mise en sommeil du service gratuit Render
-```
+## Méga-menu technique
 
-## Stack technique
+| Domaine | Entrée principale | Détails |
+|---|---|---|
+| **Vue système** | [Vue d’ensemble](documentation/src/content/docs/overview/system-overview.md) | [Architecture](documentation/src/content/docs/overview/system-architecture.md) · [Atlas des diagrammes](documentation/src/content/docs/overview/diagram-atlas.md) · [Carte du dépôt](documentation/src/content/docs/overview/repository-map.md) |
+| **Backend** | [Architecture Spring](documentation/src/content/docs/backend/architecture.md) | [Domaine](documentation/src/content/docs/backend/domain-model.md) · [API publique](documentation/src/content/docs/backend/public-api.md) · [API admin](documentation/src/content/docs/backend/admin-api.md) |
+| **Métier** | [Publication](documentation/src/content/docs/backend/publication.md) | [Persistence](documentation/src/content/docs/backend/persistence.md) · [Cache](documentation/src/content/docs/backend/cache.md) · [Concurrence](documentation/src/content/docs/backend/concurrency.md) |
+| **Fiabilité** | [Jobs / Outbox / Audit](documentation/src/content/docs/backend/jobs-outbox-audit.md) | [Analytics](documentation/src/content/docs/backend/analytics.md) · [Traduction](documentation/src/content/docs/backend/translation.md) · [Storage](documentation/src/content/docs/backend/storage.md) |
+| **Intégration** | [Front ↔ Back](documentation/src/content/docs/integration/front-back.md) | [Auth / CSRF / CORS](documentation/src/content/docs/integration/auth-csrf-cors.md) · [Cycle public](documentation/src/content/docs/integration/public-data-lifecycle.md) · [Résilience](documentation/src/content/docs/integration/resilience-cache.md) |
+| **Cloud** | [Topologie](documentation/src/content/docs/cloud/topology.md) | [Cloudflare](documentation/src/content/docs/cloud/cloudflare.md) · [Render](documentation/src/content/docs/cloud/render.md) · [Données & médias](documentation/src/content/docs/cloud/data-and-media.md) |
+| **Déploiement** | [Release complète](documentation/src/content/docs/deployment/full-release.md) | [Développement local](documentation/src/content/docs/deployment/local-development.md) · [Backend](documentation/src/content/docs/deployment/backend.md) · [Rollback](documentation/src/content/docs/deployment/rollback.md) |
+| **Qualité** | [Stratégie de tests](documentation/src/content/docs/quality/testing-strategy.md) | [Tests backend](documentation/src/content/docs/quality/backend-tests.md) · [CI/CD](documentation/src/content/docs/quality/ci-cd.md) · [Contrat documentaire](documentation/src/content/docs/quality/documentation-contract.md) |
+| **Sécurité** | [Frontières de confiance](documentation/src/content/docs/security/trust-boundaries.md) | [Sécurité HTTP](documentation/src/content/docs/security/http-security.md) · [SecurityFilterChain](documentation/src/content/docs/backend/security.md) |
+| **Exploitation** | [Observabilité](documentation/src/content/docs/operations/observability.md) | [Backend observability](documentation/src/content/docs/backend/observability.md) · [Troubleshooting](documentation/src/content/docs/operations/troubleshooting.md) |
+| **Référence** | [Navigation](documentation/src/content/docs/reference/navigation.md) | [Endpoints](documentation/src/content/docs/reference/endpoints.md) · [Environnement](documentation/src/content/docs/reference/environment.md) · [Commandes](documentation/src/content/docs/reference/commands.md) |
 
-### Frontend
+---
 
-- React 19 ;
-- Vite 8 ;
-- Mantine 9 ;
-- Tailwind CSS 4 via `@tailwindcss/vite` ;
-- React Router DOM 7 ;
-- Three.js, React Three Fiber, Drei et Rapier pour les scènes 3D et interactions physiques ;
-- GSAP et ScrollTrigger chargés via CDN ;
-- Cloudflare Workers Assets via Wrangler.
+## Architecture Backend
 
-### Backend
+<p align="center">
+  <img src="documentation/public/diagrams/backend-modules.svg" alt="Architecture modulaire du backend Spring Boot" width="100%" />
+</p>
 
-- Java 21 ;
-- Spring Boot 4.0.6 ;
-- Spring Web MVC ;
-- Spring Data JPA / Hibernate ;
-- PostgreSQL ;
-- Flyway configuré côté application ;
-- Bean Validation Jakarta ;
-- Spring Security, CSRF, CORS, formulaire de connexion Thymeleaf ;
-- Actuator health ;
-- Cloudinary SDK ;
-- Docker multi-stage ;
+Le backend sépare contrôleurs HTTP, services métier, persistence et capacités transversales. Les packages analytics, publication, jobs, events/outbox, translation, upload, visibility et engineering disposent de responsabilités explicites. Spring Security ferme par défaut les routes non classées et les transactions protègent les écritures métier.
 
-## Fonctionnalités principales
+### Capacités principales
 
-| Domaine | Fonctionnalités |
-|---|---|
-| Portfolio public | Affichage du profil, des expériences, des projets publiés, des liens, du CV et des métadonnées SEO. |
-| Administration | Création et modification d’un owner, profil, timeline, expériences, projets et contacts. |
-| Versioning | Gestion de plusieurs versions du portfolio, duplication d’une version, activation d’une version unique, validation avant publication. |
-| Fichiers | Upload protégé, stockage local en développement ou Cloudinary en production, preview d’images et de PDF. |
-| Sécurité | API manager protégée, rôle `ADMIN`, CSRF sur les méthodes mutantes, CORS restrictif, redirections frontend contrôlées. |
-| Déploiement | Front Cloudflare, back Render Docker, base Aiven, fichiers Cloudinary, health ping cron-job.org. |
+- **Lecture publique** : assemblage du contenu publié, localisation et cache Caffeine.
+- **Administration** : Owner, snapshots éditoriaux, profil, timeline, expériences, projets, visibilité et médias.
+- **Publication** : validation, idempotence, planification, rollback éditorial, audit et invalidation de cache.
+- **Persistence** : JPA/Hibernate, PostgreSQL, migrations Flyway et concurrence optimiste.
+- **Fiabilité asynchrone** : jobs persistés, outbox, retries bornés et récupération des traitements interrompus.
+- **Sécurité** : session admin, CSRF, CORS allowlist, validation des redirections et politique `denyAll` par défaut.
+- **Observabilité** : Actuator, Prometheus, request ID, route profiler, analytics et Mission Control.
 
-## Lancement local
+---
 
-### 1. Backend
+## Modèle de données et publication
 
-À lancer depuis le dossier du backend.
+<p align="center">
+  <img src="documentation/public/diagrams/data-model.svg" alt="Modèle relationnel central du backend" width="100%" />
+</p>
+
+Le contenu éditorial est organisé autour d’un `Owner` et de snapshots `WebsiteVersion`. Le snapshot agrège profil, timeline et projets ; des tables spécialisées portent analytics, traductions, visibilité, jobs, outbox, audit de publication et échantillons runtime. `WebsiteVersion` est un concept métier courant du backend : il permet de préparer, prévisualiser et publier un snapshot sans confondre l’état de travail avec l’état public.
+
+<p align="center">
+  <img src="documentation/public/diagrams/publication-pipeline.svg" alt="Pipeline de publication du contenu" width="100%" />
+</p>
+
+---
+
+## Front ↔ Back et sécurité
+
+<p align="center">
+  <img src="documentation/public/diagrams/security-boundaries.svg" alt="Frontières publiques et administrées" width="100%" />
+</p>
+
+Les routes `/website/**` exposent la lecture publique. L’administration utilise les familles `/manager/**`, `/api/**` administratives et `/uploads/**` derrière une session `ADMIN`. Les mutations de session restent protégées par CSRF ; CORS est construit depuis une allowlist d’origines ; les réponses et erreurs conservent un request ID utile pour la corrélation.
+
+Le détail complet est dans [Front ↔ Back](documentation/src/content/docs/integration/front-back.md) et [Sécurité Backend](documentation/src/content/docs/backend/security.md).
+
+---
+
+## Cloud et déploiement
+
+<p align="center">
+  <img src="documentation/public/diagrams/deployment-topology.svg" alt="Topologie cloud et déploiement" width="100%" />
+</p>
+
+Le conteneur Spring Boot est déployé sur Render. PostgreSQL managé fournit la persistence relationnelle, Cloudinary peut servir de provider de stockage média et LibreTranslate reste une intégration côté serveur. Le frontend distribué par Cloudflare appelle l’API en HTTPS. GitHub Actions exécute la qualité, produit l’artifact backend et peut déclencher le déploiement Render via secret de repository.
+
+---
+
+## Site documentaire
+
+La documentation complète est un site **Astro + Starlight** autonome dans `documentation/`. Les diagrammes SVG sont conservés avec leurs sources Graphviz afin de rester maintenables comme du code.
 
 ```bash
-docker compose down
-docker compose build --no-cache backend
-docker compose up backend
+cd documentation
+npm install
+npm run check
+npm run dev
 ```
 
-Cette commande démarre le backend ainsi que PostgreSQL et LibreTranslate déclarés dans `docker-compose.yml`. Le backend est exposé sur :
-
-```txt
-http://localhost:8080
-```
-
-La base PostgreSQL locale est exposée sur :
-
-```txt
-localhost:5433
-```
-
-Route de santé locale :
-
-```txt
-http://localhost:8080/actuator/health
-```
-
-### 2. Frontend en mode production local
-
-À lancer depuis le dossier du frontend.
+Build documentaire :
 
 ```bash
 npm run build
 npm run preview
 ```
 
-Le preview Vite est exposé par défaut sur :
+La CI documentaire est séparée de la CI applicative et ne devient pas une dépendance cachée des tests Spring Boot.
 
-```txt
-http://localhost:4173
-```
+---
 
-Cette URL est déjà prévue dans la configuration CORS locale du backend.
-
-### 3. Frontend en mode développement
-
-Le mode développement existe également :
+## Commandes du dépôt
 
 ```bash
-npm run dev
+./mvnw test
+./mvnw clean verify
+docker compose up --build
 ```
 
-Il démarre généralement sur :
-
-```txt
-http://localhost:5173
-```
-
-En développement, Vite proxifie les routes backend (`/website`, `/manager`, `/api`, `/uploads`, `/csrf`, `/login`, `/logout`) vers `http://localhost:8080`, sauf configuration contraire via `VITE_API_PROXY_TARGET`.
-
-## Connexion frontend / backend
-
-En production, le frontend utilise une URL backend explicite via :
-
-```txt
-VITE_API_BASE_URL=https://professional-website-hozo.onrender.com
-```
-
-Le backend doit autoriser l’origine Cloudflare dans :
-
-```txt
-APP_CORS_ALLOWED_ORIGINS=https://professional-website-front.achabou02idris.workers.dev
-APP_FRONTEND_ALLOWED_ORIGINS=https://professional-website-front.achabou02idris.workers.dev
-APP_FRONTEND_ORIGIN=https://professional-website-front.achabou02idris.workers.dev
-```
-
-En local, les origines utiles sont :
-
-```txt
-http://localhost:5173
-http://localhost:4173
-```
-
-## Déploiement
-
-### Frontend — Cloudflare Workers Assets
-
-Le frontend est compilé par Vite puis servi comme Single Page Application via Cloudflare Workers Assets. La configuration est portée par `wrangler.jsonc` :
-
-```txt
-assets.directory = ./dist
-assets.not_found_handling = single-page-application
-```
-
-Commande de déploiement disponible côté frontend :
+Documentation :
 
 ```bash
+cd documentation
+npm install
 npm run build
-npm run cf:deploy
 ```
 
-### Backend — Render avec Docker
+Les endpoints, paramètres et opérations quotidiennes sont centralisés dans la section [Référence](documentation/src/content/docs/reference/navigation.md).
 
-Le backend est construit depuis le `Dockerfile`. L’image :
+---
 
-1. compile l’application Maven avec Java 21 ;
-3. expose le port applicatif Spring Boot ;
-4. lance `app.jar`.
+<div align="center">
 
-Render fournit la variable `PORT`. L’application l’utilise via :
+**Source de vérité documentaire : branche `main`, code, configuration, migrations et contrats exécutables du dépôt.**
 
-```yaml
-server:
-  port: ${PORT:8080}
-```
+[Ouvrir l’atlas documentaire](documentation/src/content/docs/index.mdx)
 
-### Base de données — Aiven PostgreSQL
-
-En production, Spring Boot se connecte à Aiven via les variables :
-
-```txt
-SPRING_DATASOURCE_URL
-SPRING_DATASOURCE_USERNAME
-SPRING_DATASOURCE_PASSWORD
-```
-
-### Stockage — Cloudinary
-
-Le stockage de fichiers peut être local ou Cloudinary. En production :
-
-```txt
-STORAGE_PROVIDER=cloudinary
-CLOUDINARY_CLOUD_NAME=...
-CLOUDINARY_API_KEY=...
-CLOUDINARY_API_SECRET=...
-CLOUDINARY_FOLDER=portfolio
-```
-
-### Health ping Render
-
-L’offre gratuite Render peut mettre le service en sommeil. Pour réduire ce comportement, cron-job.org appelle périodiquement :
-
-```txt
-https://professional-website-hozo.onrender.com/actuator/health
-```
-
-Cette route est volontairement légère : elle expose uniquement l’état de santé Actuator et ne retourne pas les données métier du portfolio.
-
-## Structure recommandée des dépôts
-
-Si les deux projets sont séparés, placer les README comme suit :
-
-```txt
-portfolio-root/
-├── README.md
-├── README-BACKEND.md
-├── README-FRONTEND.md
-├── professional_website/                # backend Spring Boot
-└── professional_website_front/          # frontend React
-```
-
-Ou, dans deux dépôts séparés :
-
-```txt
-professional_website/
-└── README.md                 # contenu de README-BACKEND.md
-
-professional_website_front/
-└── README.md                 # contenu de README-FRONTEND.md
-```
-
-## Notes d’audit
-
-- Le frontend inspecté utilise Three.js / React Three Fiber / Rapier. PixiJS n’est pas présent dans les dépendances de cette version.
-- GSAP est chargé depuis la dépendance npm et intégré au bundle Vite.
-- Flyway est configuré dans `application.yaml` et les migrations versionnées sont placées dans `src/main/resources/db/migration`.
-- Les fichiers `.env` et secrets ne doivent jamais être commités. Utiliser les fichiers `.env.example` / `.env.local.example` comme base.
-
-## Licence
-
-Le projet contient un fichier `LICENSE` dans les deux bases de code. Se référer au contenu de ces fichiers pour les conditions exactes.
-
-## V13 — localisation backend et LibreTranslate
-
-Le contenu métier bilingue est désormais géré par Spring Boot et PostgreSQL. Le frontend appelle `GET /website/default?locale=fr|en`; LibreTranslate est réservé à l’administration, et aucune traduction externe n’est exécutée pendant une visite publique.
-
-Le `docker-compose.yml` démarre un conteneur LibreTranslate privé chargé uniquement avec les modèles français et anglais. Les traductions sont relues puis enregistrées avec un statut `DRAFT` ou `PUBLISHED` dans `content_translation`. Une empreinte de la source française empêche l’utilisation d’une traduction devenue obsolète.
-
-Le contrat public contient également un slug stable calculé depuis le titre français, afin que les URLs projet restent identiques en français et en anglais. Une entité n’est servie en anglais que lorsque tous ses champs sont publiés et encore synchronisés avec la source.
-
-Documentation complète : [`V13-LIBRETRANSLATE-LOCALIZATION.md`](./V13-LIBRETRANSLATE-LOCALIZATION.md).
-
-
-
-## V13.1 — traduction automatique par entité et traitement global
-
-Le backend expose désormais :
-
-```http
-POST /api/translations/{contentType}/{contentKey}/auto?locale=en
-```
-
-Cet endpoint protégé charge tous les champs français de l’entité, appelle LibreTranslate, puis persiste le résultat dans `content_translation` avec le statut `DRAFT` ou `PUBLISHED`. L’administration orchestre séquentiellement cet endpoint pour proposer **Traduire tout le site** avec progression et rapport d’échec.
-
-Le traitement global couvre le profil, la timeline, les expériences, les projets et les compétences prouvées. L’API publique continue d’utiliser le français comme fallback si une traduction est absente, incomplète ou obsolète. Documentation : [`V13.1-TRANSLATION-CENTER.md`](./V13.1-TRANSLATION-CENTER.md).
-
-## V14 — retrait des modules candidatures et CV LaTeX
-
-Les fonctions de lecture/analyse d’offres, de suivi de candidatures et de génération de CV LaTeX ont été retirées du déploiement. Elles sont désormais portées par un projet local séparé. Le backend de production reste concentré sur le portfolio, l’administration du contenu, les fichiers, les analytics et les traductions.
-
-Conséquences :
-
-- suppression des packages Java `applications/` et `cv/` ;
-- suppression de TeX Live et `latexmk` de l’image Docker ;
-- suppression des variables `CV_LATEX_*` ;
-- migration Flyway `V5` supprimant la table `job_application` ;
-- conservation du champ `profile.cvUrl` pour afficher ou télécharger un CV déjà publié.
+</div>
