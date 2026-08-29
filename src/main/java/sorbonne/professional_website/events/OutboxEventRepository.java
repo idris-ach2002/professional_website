@@ -14,6 +14,9 @@ import java.util.Optional;
 
 public interface OutboxEventRepository extends JpaRepository<OutboxEvent, String> {
     long countByStatus(OutboxStatus status);
+
+    @Query("select e.status, count(e) from OutboxEvent e group by e.status")
+    List<Object[]> countGroupedByStatus();
     Page<OutboxEvent> findByStatusIn(List<OutboxStatus> statuses, Pageable pageable);
     List<OutboxEvent> findTop20ByOrderByCreatedAtDesc();
     List<OutboxEvent> findTop100ByOwnerIdOrderByCreatedAtDesc(Long ownerId);

@@ -14,6 +14,9 @@ import java.util.Optional;
 
 public interface BackgroundJobRepository extends JpaRepository<BackgroundJob, String> {
     long countByStatus(BackgroundJobStatus status);
+
+    @Query("select j.status, count(j) from BackgroundJob j group by j.status")
+    List<Object[]> countGroupedByStatus();
     Page<BackgroundJob> findByStatusIn(List<BackgroundJobStatus> statuses, Pageable pageable);
     List<BackgroundJob> findTop100ByOwnerIdOrderByCreatedAtDesc(Long ownerId);
     List<BackgroundJob> findTop50ByTypeAndStatusInAndExecuteAfterLessThanEqualOrderByPriorityDescExecuteAfterAsc(

@@ -48,3 +48,10 @@ logs/
 heapdump*
 *.hprof
 .jfr/
+
+
+# OS-specific files
+**/.DS_Store
+
+# Local dependencies cache
+.m2-offline/

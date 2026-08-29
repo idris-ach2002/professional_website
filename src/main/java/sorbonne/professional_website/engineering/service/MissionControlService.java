@@ -31,7 +31,6 @@ import java.nio.file.Path;
 import java.sql.Connection;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
-import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -76,9 +75,12 @@ public class MissionControlService {
         MissionControlSnapshotResponse.SystemTelemetry system = systemTelemetry();
         List<MissionControlSnapshotResponse.CacheStatus> caches = CACHE_NAMES.stream().map(this::cacheStatus).toList();
         MissionControlSnapshotResponse.AnalyticsQueueStatus analyticsQueue = analyticsQueueStatus();
-        Map<String, Long> jobs = enumCounts(BackgroundJobStatus.values(), jobRepository::countByStatus);
-        Map<String, Long> outbox = enumCounts(OutboxStatus.values(), outboxRepository::countByStatus);
-        Map<String, Long> publications = enumCounts(PublicationStatus.values(), versionRepository::countByPublicationStatus);
+        // One GROUP BY query per domain instead of one COUNT query per enum value.
+        // Mission Control is periodically refreshed, so avoiding N status-count round trips
+        // keeps the observability screen from becoming database load itself.
+        Map<String, Long> jobs = enumCounts(BackgroundJobStatus.values(), jobRepository.countGroupedByStatus());
+        Map<String, Long> outbox = enumCounts(OutboxStatus.values(), outboxRepository.countGroupedByStatus());
+        Map<String, Long> publications = enumCounts(PublicationStatus.values(), versionRepository.countGroupedByPublicationStatus());
         List<MissionControlSnapshotResponse.SystemEvent> recentEvents = outboxRepository
                 .findTop20ByOrderByCreatedAtDesc()
                 .stream()
@@ -288,9 +290,17 @@ public class MissionControlService {
         );
     }
 
-    private <E extends Enum<E>> Map<String, Long> enumCounts(E[] values, java.util.function.ToLongFunction<E> counter) {
+    private <E extends Enum<E>> Map<String, Long> enumCounts(E[] values, List<Object[]> groupedRows) {
         Map<String, Long> counts = new LinkedHashMap<>();
-        Arrays.stream(values).forEach(value -> counts.put(value.name(), counter.applyAsLong(value)));
+        for (E value : values) counts.put(value.name(), 0L);
+        if (groupedRows == null) return counts;
+
+        for (Object[] row : groupedRows) {
+            if (row == null || row.length < 2 || !(row[0] instanceof Enum<?> status) || !(row[1] instanceof Number count)) {
+                continue;
+            }
+            counts.put(status.name(), count.longValue());
+        }
         return counts;
     }
 

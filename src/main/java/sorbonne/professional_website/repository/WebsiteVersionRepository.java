@@ -14,6 +14,9 @@ import sorbonne.professional_website.publication.PublicationStatus;
 public interface WebsiteVersionRepository extends JpaRepository<WebsiteVersion, Long> {
     long countByPublicationStatus(PublicationStatus publicationStatus);
 
+    @Query("select w.publicationStatus, count(w) from WebsiteVersion w group by w.publicationStatus")
+    List<Object[]> countGroupedByPublicationStatus();
+
     List<WebsiteVersion> findByOwnerOwnerIdOrderByCreatedAtDesc(Long ownerId);
 
     Optional<WebsiteVersion> findByIdAndOwnerOwnerId(Long versionId, Long ownerId);

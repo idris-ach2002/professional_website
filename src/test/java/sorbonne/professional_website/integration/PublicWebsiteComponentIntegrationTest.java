@@ -3,6 +3,7 @@ package sorbonne.professional_website.integration;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cache.CacheManager;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
@@ -22,9 +23,16 @@ class PublicWebsiteComponentIntegrationTest {
 
     @Autowired OwnerRepository ownerRepository;
     @Autowired WebsiteService websiteService;
+    @Autowired CacheManager cacheManager;
 
     @BeforeEach
     void clean() {
+        cacheManager.getCacheNames().forEach(name -> {
+            var cache = cacheManager.getCache(name);
+            if (cache != null) {
+                cache.clear();
+            }
+        });
         ownerRepository.deleteAll();
     }
 
