@@ -64,7 +64,6 @@ class WebSecurityConfig {
                         // Toute l'API manager est protégée, y compris GET /manager.
                         // Sinon le front ne peut pas détecter correctement l'état non authentifié.
                         .requestMatchers("/manager", "/manager/**").hasRole("ADMIN")
-                        .requestMatchers("/api/auth/login").permitAll()
                         .requestMatchers("/api/**").hasRole("ADMIN")
                         .requestMatchers("/uploads", "/uploads/**").hasRole("ADMIN")
 
