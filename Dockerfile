@@ -13,7 +13,7 @@ WORKDIR /app
 
 ENV LANG=C.UTF-8 \
     LC_ALL=C.UTF-8 \
-    JAVA_TOOL_OPTIONS="-XX:MaxRAMPercentage=75.0"
+    JAVA_TOOL_OPTIONS="-Xms64m -Xmx256m -XX:+UseSerialGC"
 
 RUN mkdir -p /app/uploads && chown -R 10001:10001 /app
 
